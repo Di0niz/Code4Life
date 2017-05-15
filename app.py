@@ -5,7 +5,7 @@ import math
 
 
 class ModuleType(object):
-    DIAGNOSIS, MOLECULES, LABORATORY = "DIAGNOSIS", "MOLECULES", "LABORATORY"
+    DIAGNOSIS, MOLECULES, LABORATORY, SAMPLES = "DIAGNOSIS", "MOLECULES", "LABORATORY", "SAMPLES"
     
 class Module(object):
     
@@ -55,7 +55,10 @@ class World(object):
     def __init__(self):
         project_count = int(raw_input())
         for i in xrange(project_count):
-            a, b, c, d, e = [int(j) for j in raw_input().split()]
+            raw = raw_input()
+            print >> sys.stderr, raw
+
+            a, b, c, d, e = [int(j) for j in raw.split()]
 
     def update(self):
         self.modules = []
@@ -63,8 +66,9 @@ class World(object):
             module = Module()
             module.update()
             self.modules.append(module)
-
-        available_a, available_b, available_c, available_d, available_e = [int(i) for i in raw_input().split()]
+        raw = raw_input()
+        print >> sys.stderr, raw
+        available_a, available_b, available_c, available_d, available_e = [int(i) for i in raw.split()]
 
         self.own_samples = []
         self.samples = []
@@ -83,9 +87,27 @@ class World(object):
 
 class Commands(object):
     DIAGNOSIS = "DIAGNOSIS"
+    WAIT = "WAIT"
     CONNECT = "CONNECT"
     MOLECULES = "MOLECULES"
+    LABORATORY = "LABORATORY"
+    SAMPLES = "SAMPLES"
 
+def print_command(comm):
+
+    ret = "WAIT"
+    command, param = comm
+    if command == Commands.DIAGNOSIS:
+        ret = "GOTO DIAGNOSIS"
+    elif command == Commands.CONNECT and param is not None: 
+        ret = "CONNECT %s" % param
+    elif command == Commands.MOLECULES:
+        ret = "GOTO MOLECULES"
+    elif command == Commands.LABORATORY:
+        ret = "GOTO LABORATORY"
+    elif command == Commands.SAMPLES:
+        ret = "GOTO SAMPLES"
+    print ret
 
 class Actions(object):
     DIAGNOSIS = "DIAGNOSIS"
@@ -93,6 +115,10 @@ class Actions(object):
     GET_SAMPLE = "GET_SAMPLE"
     CONNET_TO_SAMPLE = "CONNET_TO_SAMPLE"
     GET_MOLECULE = "GET_MOLECULE"
+    LABORATORY = "LABORATORY"
+    SAMPLES = "SAMPLES"
+    CONNECT_LABORATORY = "CONNECT_LABORATORY"
+    CONNECT_SAMPLES = "CONNECT_SAMPLES"
 
 
 class Strategy(object):
@@ -101,8 +127,15 @@ class Strategy(object):
         self.world = world
 
         self.sample = None
+        self.undefined = None
         if len(self.world.own_samples) > 0:
             self.sample = self.world.own_samples[0]
+
+        for sample in self.world.own_samples:
+            if sample.cost_a == -1:
+                self.undefined = sample
+
+        self.target = self.world.modules[0]
 
 
     def get_action(self):
@@ -113,11 +146,18 @@ class Strategy(object):
         cur_module = self.world.modules[0]
 
         if cur_module.target == "START_POS":
-            command = (Commands.DIAGNOSIS, None)
+            if len(self.world.samples) > 0:
+                command = (Commands.DIAGNOSIS, None)
+            else:
+                command = (Commands.SAMPLES, None)
         elif cur_module.target == ModuleType.DIAGNOSIS:
             action = Actions.GET_SAMPLE
         elif cur_module.target == ModuleType.MOLECULES:
             action = Actions.GET_MOLECULE
+        elif cur_module.target == ModuleType.LABORATORY:
+            action = Actions.CONNECT_LABORATORY
+        elif cur_module.target == ModuleType.SAMPLES:
+            action = Actions.CONNECT_SAMPLES
 
         sample = None
 
@@ -125,19 +165,63 @@ class Strategy(object):
 
             if action == Actions.FIND_SAMPLE:
 
-                sample = self.world.samples[ int( random.random() * (len(self.world.samples)-1))]
+                if len(self.world.samples) > 0:
+                    sample = self.world.samples[ int( random.random() * (len(self.world.samples)-1))]
+                    action = Actions.CONNET_TO_SAMPLE
+                else:
+                    command = (Commands.SAMPLES, None)
 
-                action = Actions.CONNET_TO_SAMPLE
 
             elif action == Actions.GET_SAMPLE:
 
                 if self.sample is not None:
-                    command = (Commands.MOLECULES, None)
+                    if self.undefined is None:
+                        command = (Commands.MOLECULES, None)
+                    else:
+                        command = (Commands.CONNECT, self.undefined.sample_id)
                 else:
                     action = Actions.FIND_SAMPLE
 
             elif action == Actions.CONNET_TO_SAMPLE:
-                command = (Commands.CONNECT, sample)
+                command = (Commands.CONNECT, sample.sample_id)
+
+            elif action == Actions.CONNECT_LABORATORY:
+                if self.sample is None:
+                    command = (Commands.DIAGNOSIS, None)
+                else:
+                    command = (Commands.CONNECT, self.sample.sample_id)
+
+            elif action == Actions.CONNECT_SAMPLES:
+                
+                if len(self.world.samples) > 0 or len(self.world.own_samples) > 2:
+                    command = (Commands.DIAGNOSIS, None)
+                else:
+                    command = (Commands.CONNECT, 1)
+
+            elif action == Actions.GET_MOLECULE:
+                if self.target.storage_a < self.sample.cost_a:
+                    command = (Commands.CONNECT, "A")
+
+                elif self.target.storage_b < self.sample.cost_b:
+                    command = (Commands.CONNECT, "B")
+
+                elif self.target.storage_c < self.sample.cost_c:
+                    command = (Commands.CONNECT, "C")
+
+                elif self.target.storage_d < self.sample.cost_d:
+                    command = (Commands.CONNECT, "D")
+
+                elif self.target.storage_e < self.sample.cost_e:
+                    command = (Commands.CONNECT, "E")
+
+                else:
+                    command = (Commands.LABORATORY, None)
+
+            else:
+                # Дорабатываем систему
+                Command = (Commands.WAIT, None)
+
+            print >>sys.stderr, "DESITION: ", action, command
 
         return command
 
@@ -156,4 +240,4 @@ if __name__ == '__main__':
         command = STRATEGY.get_action()
 
 
-        print command
+        print_command(command)
