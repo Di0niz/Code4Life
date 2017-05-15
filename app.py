@@ -295,7 +295,7 @@ class Strategy(object):
                 else:
                     action = Actions.MOLECULES_TO_LABORATORY
             elif action == Actions.MOLECULES_CONNECT:
-                molecules = self.target.find_molecules(self.diagnosed)
+                molecules = self.target.find_molecules(self.diagnosed[:2])
 
                 if self.target.molecules < 10 and self.world.check_available(molecules):
                     command = (Commands.CONNECT, molecules.popitem()[0])
