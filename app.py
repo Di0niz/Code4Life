@@ -6,9 +6,9 @@ import math
 
 class ModuleType(object):
     DIAGNOSIS, MOLECULES, LABORATORY, SAMPLES = "DIAGNOSIS", "MOLECULES", "LABORATORY", "SAMPLES"
-    
+
 class Module(object):
-    
+
     def __init__(self):
         pass
 
@@ -20,22 +20,75 @@ class Module(object):
         self.target = target
         self.eta = int(eta)
         self.score = int(score)
-        self.storage_a = int(storage_a)
-        self.storage_b = int(storage_b)
-        self.storage_c = int(storage_c)
-        self.storage_d = int(storage_d)
-        self.storage_e = int(storage_e)
-        self.expertise_a = int(expertise_a)
-        self.expertise_b = int(expertise_b)
-        self.expertise_c = int(expertise_c)
-        self.expertise_d = int(expertise_d)
-        self.expertise_e = int(expertise_e)
+        self.storage = {}
+        self.storage['a'] = int(storage_a)
+        self.storage['b'] = int(storage_b)
+        self.storage['c'] = int(storage_c)
+        self.storage['d'] = int(storage_d)
+        self.storage['e'] = int(storage_e)
+        self.expertise = {}
+        self.expertise['a'] = int(expertise_a)
+        self.expertise['b'] = int(expertise_b)
+        self.expertise['c'] = int(expertise_c)
+        self.expertise['d'] = int(expertise_d)
+        self.expertise['e'] = int(expertise_e)
+
+        self.molecules = int(storage_a) + int(storage_b) + int(storage_c) + int(storage_d) + int(storage_e)
+
+    def find_molecules(self, samples):
+        """Определение количества требуемых"""
+        molecules = {'a':0,'b':0,'c':0,'d':0,'e':0}
+        # sum molecules
+        for sample in samples:
+            if sample.diagnosed:
+                for key in sample.cost:
+                    molecules[key] = molecules[key] + sample.cost[key]
+
+        # div 
+        for key in self.storage:
+            molecules[key] = molecules[key] - self.storage[key]
+            # вычитаем очки опыта
+            molecules[key] = molecules[key] - self.expertise[key]
+
+        res = {}
+        for key in molecules:
+            if molecules[key] > 0:
+                res[key] = molecules[key]
+
+        return res
+
+
+    def find_availables(self, samples):
+        """Определение количества требуемых"""
+
+        availables = []
+
+        molecules = {'a':0,'b':0,'c':0,'d':0,'e':0}
+        for key in self.storage:
+            molecules[key] = molecules[key] + self.storage[key] + self.expertise[key]
+
+        # sum molecules
+        for sample in samples:
+            if sample.diagnosed:
+                av_sample = True
+                for key in sample.cost:
+                    if molecules[key] - sample.cost[key] < 0:
+                        av_sample = False
+
+                if av_sample:
+
+                    availables.append(sample)
+
+                    for key in sample.cost:
+                        molecules[key] = molecules[key] - sample.cost[key]
+
+        return availables
 
 class Sample(object):
-    
+
     def __init__(self):
         pass
-    
+
     def update(self):
         raw = raw_input()
         print >> sys.stderr, raw
@@ -44,11 +97,14 @@ class Sample(object):
         self.carried_by = int(carried_by)
         self.rank = int(rank)
         self.health = int(health)
-        self.cost_a = int(cost_a)
-        self.cost_b = int(cost_b)
-        self.cost_c = int(cost_c)
-        self.cost_d = int(cost_d)
-        self.cost_e = int(cost_e)
+        self.cost = {}
+        self.cost['a'] = int(cost_a)
+        self.cost['b'] = int(cost_b)
+        self.cost['c'] = int(cost_c)
+        self.cost['d'] = int(cost_d)
+        self.cost['e'] = int(cost_e)
+
+        self.diagnosed = (int(cost_a) != -1)
 
 
 class World(object):
@@ -67,8 +123,16 @@ class World(object):
             module.update()
             self.modules.append(module)
         raw = raw_input()
+        
         print >> sys.stderr, raw
         available_a, available_b, available_c, available_d, available_e = [int(i) for i in raw.split()]
+        self.available ={}
+        self.available['a'] = available_a
+        self.available['b'] = available_b
+        self.available['c'] = available_c
+        self.available['d'] = available_d
+        self.available['e'] = available_e
+
 
         self.own_samples = []
         self.samples = []
@@ -83,6 +147,14 @@ class World(object):
                 self.own_samples.append(sample)
             else:
                 self.samples.append(sample)
+
+    def check_available(self, molecules):
+        available = True
+        for key in molecules:
+            if self.available[key] < molecules[key]:
+                available = False
+
+        return available
 
 
 class Commands(object):
@@ -111,14 +183,24 @@ def print_command(comm):
 
 class Actions(object):
     DIAGNOSIS = "DIAGNOSIS"
-    FIND_SAMPLE = "FIND_SAMPLE"
-    GET_SAMPLE = "GET_SAMPLE"
-    CONNET_TO_SAMPLE = "CONNET_TO_SAMPLE"
-    GET_MOLECULE = "GET_MOLECULE"
-    LABORATORY = "LABORATORY"
+    DIAGNOSIS_CONNECT = "DIAGNOSIS_CONNECT"
+    DIAGNOSIS_TO_MOLECULES = "DIAGNOSIS_TO_MOLECULES"
+
     SAMPLES = "SAMPLES"
-    CONNECT_LABORATORY = "CONNECT_LABORATORY"
-    CONNECT_SAMPLES = "CONNECT_SAMPLES"
+    SAMPLES_CONNECT = "SAMPLES_CONNECT"
+    SAMPLES_TO_DIAGNOSIS = "SAMPLES_TO_DIAGNOSIS"
+
+
+    LABORATORY = "LABORATORY"
+    LABORATORY_CONNECT = "LABORATORY_CONNECT"
+    LABORATORY_TO_DIAGNOSIS = "LABORATORY_TO_DIAGNOSIS"
+    LABORATORY_TO_SAMPLES = "LABORATORY_TO_SAMPLES"
+    LABORATORY_TO_MOLECULES = "LABORATORY_TO_MOLECULES"
+
+    MOLECULES = "MOLECULES"
+    MOLECULES_CONNECT = "MOLECULES_CONNECT"
+    MOLECULES_GREED = "MOLECULES_GREED"
+    MOLECULES_TO_LABORATORY = "MOLECULES_TO_LABORATORY"
 
 
 class Strategy(object):
@@ -126,17 +208,32 @@ class Strategy(object):
     def __init__(self, world):
         self.world = world
 
-        self.sample = None
-        self.undefined = None
-    
+        self.diagnosed = []
+        self.undiagnosed = []
+        self.availables = []
+
+        # Определяем примеры которые необходимо проверить
         for sample in self.world.own_samples:
-            if sample.cost_a == -1:
-                self.undefined = sample
+            if sample.diagnosed:
+                self.diagnosed.append(sample)
             else:
-                self.sample = self.world.own_samples[0]
+                self.undiagnosed.append(sample)
 
         self.target = self.world.modules[0]
 
+        self.availables = self.target.find_availables(self.diagnosed)
+
+    def greed_molecule(self):
+        molecule = None
+
+        order_keys = sorted(self.world.available,key=self.world.available.get)
+
+        for key in order_keys:
+            if self.world.available[key] > 0 and self.world.available[key] < self.target.molecules:
+                molecule = key
+                break
+
+        return molecule
 
     def get_action(self):
 
@@ -151,75 +248,89 @@ class Strategy(object):
             else:
                 command = (Commands.SAMPLES, None)
         elif cur_module.target == ModuleType.DIAGNOSIS:
-            action = Actions.GET_SAMPLE
+            action = Actions.DIAGNOSIS
         elif cur_module.target == ModuleType.MOLECULES:
-            action = Actions.GET_MOLECULE
+            action = Actions.MOLECULES
         elif cur_module.target == ModuleType.LABORATORY:
-            action = Actions.CONNECT_LABORATORY
+            action = Actions.LABORATORY
         elif cur_module.target == ModuleType.SAMPLES:
-            action = Actions.CONNECT_SAMPLES
+            action = Actions.SAMPLES
 
-        sample = None
+        print >>sys.stderr, "START: ", action
+
 
         while command is None:
 
-            if action == Actions.FIND_SAMPLE:
-                samples = self.world.own_samples
-                if len(samples) > 0:
-                    sample = samples[ int( random.random() * (len(samples)-1))]
-                    action = Actions.CONNET_TO_SAMPLE
+            if action == Actions.SAMPLES:
+                if len(self.undiagnosed) < 3:
+                    action = Actions.SAMPLES_CONNECT
                 else:
-                    command = (Commands.SAMPLES, None)
+                    action = Actions.SAMPLES_TO_DIAGNOSIS
 
+            elif action == Actions.SAMPLES_CONNECT:
+                command = (Commands.CONNECT, 1)
 
-            elif action == Actions.GET_SAMPLE:
+            elif action == Actions.SAMPLES_TO_DIAGNOSIS:
+                command = (Commands.DIAGNOSIS, None)
 
-                if self.sample is not None:
-
-                    if self.undefined is None:
-                        command = (Commands.MOLECULES, None)
-                    else:
-                        command = (Commands.CONNECT, self.undefined.sample_id)
+            elif action == Actions.DIAGNOSIS:
+                if len(self.undiagnosed):
+                    action = Actions.DIAGNOSIS_CONNECT
                 else:
-                    action = Actions.FIND_SAMPLE
+                    action = Actions.DIAGNOSIS_TO_MOLECULES
 
-            elif action == Actions.CONNET_TO_SAMPLE:
-                command = (Commands.CONNECT, sample.sample_id)
+            elif action == Actions.DIAGNOSIS_CONNECT:
+                command = (Commands.CONNECT, self.undiagnosed.pop().sample_id)
 
-            elif action == Actions.CONNECT_LABORATORY:
-                if self.sample is None:
-                    if self.undefined is None:
-                        command = (Commands.SAMPLES, None)
-                    else:
-                        command = (Commands.DIAGNOSIS, None)
+            elif action == Actions.DIAGNOSIS_TO_MOLECULES:
+                command = (Commands.MOLECULES, None)
+
+            elif action == Actions.MOLECULES:
+                molecules = self.target.find_molecules(self.diagnosed)
+
+                if len(molecules.keys()) > 0:
+                    action = Actions.MOLECULES_CONNECT
+                elif self.target.molecules < 10:
+                    action = Actions.MOLECULES_GREED
                 else:
-                    command = (Commands.CONNECT, self.sample.sample_id)
+                    action = Actions.MOLECULES_TO_LABORATORY
+            elif action == Actions.MOLECULES_CONNECT:
+                molecules = self.target.find_molecules(self.diagnosed)
 
-            elif action == Actions.CONNECT_SAMPLES:
-                
-                if len(self.world.samples) > 0 or len(self.world.own_samples) > 0:
-                    command = (Commands.DIAGNOSIS, None)
+                if self.target.molecules < 10 and self.world.check_available(molecules):
+                    command = (Commands.CONNECT, molecules.popitem()[0])
                 else:
-                    command = (Commands.CONNECT, 1)
+                    action = Actions.MOLECULES_TO_LABORATORY
 
-            elif action == Actions.GET_MOLECULE:
-                if self.target.storage_a < self.sample.cost_a:
-                    command = (Commands.CONNECT, "A")
+            elif action == Actions.MOLECULES_GREED:
+                free_molecules = self.greed_molecule()
 
-                elif self.target.storage_b < self.sample.cost_b:
-                    command = (Commands.CONNECT, "B")
-
-                elif self.target.storage_c < self.sample.cost_c:
-                    command = (Commands.CONNECT, "C")
-
-                elif self.target.storage_d < self.sample.cost_d:
-                    command = (Commands.CONNECT, "D")
-
-                elif self.target.storage_e < self.sample.cost_e:
-                    command = (Commands.CONNECT, "E")
-
+                if free_molecules is not None:
+                    command = (Commands.CONNECT, free_molecules)
                 else:
-                    command = (Commands.LABORATORY, None)
+                    action = Actions.MOLECULES_TO_LABORATORY
+
+            elif action == Actions.MOLECULES_TO_LABORATORY:
+                command = (Commands.LABORATORY, None)
+
+            elif action == Actions.LABORATORY:
+                if len(self.availables) > 0:
+                    action = Actions.LABORATORY_CONNECT
+                elif len(self.diagnosed) > 0:
+                    action = Actions.LABORATORY_TO_MOLECULES
+                elif len(self.undiagnosed) > 0:
+                    action = Actions.LABORATORY_TO_DIAGNOSIS
+                else:
+                    action = Actions.LABORATORY_TO_SAMPLES
+
+            elif action == Actions.LABORATORY_TO_DIAGNOSIS:
+                command = (Commands.DIAGNOSIS, None)
+            elif action == Actions.LABORATORY_TO_MOLECULES:
+                command = (Commands.MOLECULES, None)
+            elif action == Actions.LABORATORY_TO_SAMPLES:
+                command = (Commands.SAMPLES, None)
+            elif action == Actions.LABORATORY_CONNECT:
+                command = (Commands.CONNECT, self.availables.pop().sample_id)
 
             else:
                 # Дорабатываем систему
