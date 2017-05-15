@@ -128,12 +128,12 @@ class Strategy(object):
 
         self.sample = None
         self.undefined = None
-        if len(self.world.own_samples) > 0:
-            self.sample = self.world.own_samples[0]
-
+    
         for sample in self.world.own_samples:
             if sample.cost_a == -1:
                 self.undefined = sample
+            else:
+                self.sample = self.world.own_samples[0]
 
         self.target = self.world.modules[0]
 
@@ -164,9 +164,9 @@ class Strategy(object):
         while command is None:
 
             if action == Actions.FIND_SAMPLE:
-
-                if len(self.world.samples) > 0:
-                    sample = self.world.samples[ int( random.random() * (len(self.world.samples)-1))]
+                samples = self.world.own_samples
+                if len(samples) > 0:
+                    sample = samples[ int( random.random() * (len(samples)-1))]
                     action = Actions.CONNET_TO_SAMPLE
                 else:
                     command = (Commands.SAMPLES, None)
@@ -175,6 +175,7 @@ class Strategy(object):
             elif action == Actions.GET_SAMPLE:
 
                 if self.sample is not None:
+
                     if self.undefined is None:
                         command = (Commands.MOLECULES, None)
                     else:
@@ -187,13 +188,16 @@ class Strategy(object):
 
             elif action == Actions.CONNECT_LABORATORY:
                 if self.sample is None:
-                    command = (Commands.DIAGNOSIS, None)
+                    if self.undefined is None:
+                        command = (Commands.SAMPLES, None)
+                    else:
+                        command = (Commands.DIAGNOSIS, None)
                 else:
                     command = (Commands.CONNECT, self.sample.sample_id)
 
             elif action == Actions.CONNECT_SAMPLES:
                 
-                if len(self.world.samples) > 0 or len(self.world.own_samples) > 2:
+                if len(self.world.samples) > 0 or len(self.world.own_samples) > 0:
                     command = (Commands.DIAGNOSIS, None)
                 else:
                     command = (Commands.CONNECT, 1)
