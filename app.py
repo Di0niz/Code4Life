@@ -290,12 +290,12 @@ class Strategy(object):
 
                 if len(molecules.keys()) > 0:
                     action = Actions.MOLECULES_CONNECT
-                elif self.target.molecules < 10:
-                    action = Actions.MOLECULES_GREED
+                #elif self.target.molecules < 10:
+                #    action = Actions.MOLECULES_GREED
                 else:
                     action = Actions.MOLECULES_TO_LABORATORY
             elif action == Actions.MOLECULES_CONNECT:
-                molecules = self.target.find_molecules(self.diagnosed[:2])
+                molecules = self.target.find_molecules(self.diagnosed)
 
                 if self.target.molecules < 10 and self.world.check_available(molecules):
                     command = (Commands.CONNECT, molecules.popitem()[0])
