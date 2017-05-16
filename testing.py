@@ -6,20 +6,21 @@ from app import Sample, Module, World, Strategy
 
 
 class TestStringMethods(unittest.TestCase):
-    def test_potensial(self):
+    def test_potential(self):
         """Проверяем вычисление потенциальных точек"""
 
         sys.stdin = StringIO.StringIO('0')
 
         w = World()
 
-        sys.stdin = StringIO.StringIO("""MOLECULES 1 28 1 0 0 0 3 1 4 0 3 2
-        LABORATORY 1 94 2 2 4 0 0 2 1 1 3 1
-        3 4 2 6 3
-        3
-        19 0 2 C 20 0 5 3 0 0
-        20 0 2 D 20 1 4 2 0 0
-        17 1 3 E 30 3 3 5 3 0
+        sys.stdin = StringIO.StringIO("""DIAGNOSIS 0 0 0 0 0 0 0 0 0 0 0 0
+        MOLECULES 0 0 0 1 0 0 0 0 0 0 0 0
+        6 5 6 6 6
+        4
+        1 0 2 D 30 0 0 0 6 0
+        2 0 2 E 20 0 0 5 3 0
+        3 0 2 D 10 0 3 0 2 3
+        0 1 2 E 20 0 1 4 2 0
         """)
 
         w.update()
@@ -28,14 +29,10 @@ class TestStringMethods(unittest.TestCase):
 
         print s.availables
         print s.potentials
+        print s.diagnosed
 
         command = s.get_action()
         print command
-
-
-
-        
-
 
     pass
 
