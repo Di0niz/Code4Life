@@ -33,7 +33,12 @@ class Module(object):
         self.expertise['d'] = int(expertise_d)
         self.expertise['e'] = int(expertise_e)
 
-        self.molecules = int(storage_a) + int(storage_b) + int(storage_c) + int(storage_d) + int(storage_e)
+        #self.molecules = int(storage_a) + int(storage_b) + int(storage_c) + int(storage_d) + int(storage_e)
+
+        self.count_molecules = sum(self.storage.values())
+
+        self.expected_molecules = self.count_molecules + sum(self.expertise.values())
+        
 
     def find_molecules(self, samples):
         """Определение количества требуемых"""
@@ -84,6 +89,32 @@ class Module(object):
 
         return availables
 
+
+    def find_potentials(self, samples, world):
+        """Определение количества требуемых"""
+
+        availables = []
+
+        molecules = {'a':0,'b':0,'c':0,'d':0,'e':0}
+        for key in self.storage:
+            molecules[key] = molecules[key] + self.storage[key] + self.expertise[key] + world.available[key]
+
+        # sum molecules
+        for sample in samples:
+            if sample.diagnosed:
+                av_sample = True
+                for key in sample.cost:
+                    if molecules[key] - sample.cost[key] < 0:
+                        av_sample = False
+
+                if av_sample:
+
+                    availables.append(sample)
+
+                    for key in sample.cost:
+                        molecules[key] = molecules[key] - sample.cost[key]
+
+        return availables
 class Sample(object):
 
     def __init__(self):
@@ -211,6 +242,7 @@ class Strategy(object):
         self.diagnosed = []
         self.undiagnosed = []
         self.availables = []
+        self.potentials = []
 
         # Определяем примеры которые необходимо проверить
         for sample in self.world.own_samples:
@@ -220,8 +252,11 @@ class Strategy(object):
                 self.undiagnosed.append(sample)
 
         self.target = self.world.modules[0]
-
+        
+        all_potentials = self.target.find_potentials(self.diagnosed, world)
         self.availables = self.target.find_availables(self.diagnosed)
+
+        self.potentials = [x for x in all_potentials if x not in self.availables]
 
     def greed_molecule(self):
         molecule = None
@@ -268,7 +303,12 @@ class Strategy(object):
                     action = Actions.SAMPLES_TO_DIAGNOSIS
 
             elif action == Actions.SAMPLES_CONNECT:
-                command = (Commands.CONNECT, 1)
+                if self.target.expected_molecules > 11:
+                    command = (Commands.CONNECT, 3, action)
+                elif self.target.expected_molecules > 7:
+                    command = (Commands.CONNECT, 2, action)
+                else:
+                    command = (Commands.CONNECT, 1, action)
 
             elif action == Actions.SAMPLES_TO_DIAGNOSIS:
                 command = (Commands.DIAGNOSIS, None)
@@ -295,9 +335,9 @@ class Strategy(object):
                 else:
                     action = Actions.MOLECULES_TO_LABORATORY
             elif action == Actions.MOLECULES_CONNECT:
-                molecules = self.target.find_molecules(self.diagnosed)
+                molecules = self.target.find_molecules(self.potentials[:1])
 
-                if self.target.molecules < 10 and self.world.check_available(molecules):
+                if self.target.count_molecules < 10:
                     command = (Commands.CONNECT, molecules.popitem()[0])
                 else:
                     action = Actions.MOLECULES_TO_LABORATORY
@@ -336,15 +376,15 @@ class Strategy(object):
                 # Дорабатываем систему
                 Command = (Commands.WAIT, None)
 
-            print >>sys.stderr, "DESITION: ", action, command
+            print >>sys.stderr, "DISITION: ", action, command
 
         return command
 
 
-WORLD = World()
 
 if __name__ == '__main__':
-        
+    WORLD = World()
+
     while True:
 
         WORLD.update()
