@@ -444,7 +444,7 @@ class Strategy(object):
                 else:
                     action = Actions.MOLECULES_TO_LABORATORY
             elif action == Actions.MOLECULES_CONNECT:
-                molecules = self.target.find_molecules(self.potentials[:1])
+                molecules = self.target.find_molecules(self.potentials)
 
                 if self.target.count_molecules < 10 and molecules is not None:
                     command = (Commands.CONNECT, molecules, action)
