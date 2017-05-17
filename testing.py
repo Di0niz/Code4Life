@@ -119,9 +119,9 @@ MOLECULES 2 4 0 0 0 2 0 0 0 1 2 1
         w = World()
 
 
-        sys.stdin = StringIO.StringIO("""MOLECULES 1 24 0 0 1 1 1 3 0 1 1 1
-        DIAGNOSIS 0 6 0 1 0 2 0 0 1 1 2 2
-        5 4 4 2 4
+        sys.stdin = StringIO.StringIO("""MOLECULES 1 24 0 0 1 0 0 3 0 1 1 1
+        DIAGNOSIS 2 6 0 1 0 2 0 0 1 1 2 2
+        5 4 4 3 5
         6
         13 0 2 B 20 2 0 0 1 4
         14 0 2 A 20 0 0 1 4 2
@@ -129,10 +129,20 @@ MOLECULES 2 4 0 0 0 2 0 0 0 1 2 1
         6 1 1 E 1 2 2 0 1 0
         16 1 2 0 -1 -1 -1 -1 -1 -1
         17 1 2 0 -1 -1 -1 -1 -1 -1
+
         """)
         w.update()
         
         s = Strategy(w)
+
+        print s.availables
+        print s.potentials
+        results = []
+        for sample in s.diagnosed:
+            cost = sample.cost.submodule(s.target.expertise)
+            results.append((cost.sum(), cost.max_letter()))
+        print sorted(results, key=lambda x: x[0])[:1]
+
 
 if __name__ == '__main__':
     unittest.main()

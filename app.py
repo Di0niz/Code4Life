@@ -117,15 +117,13 @@ class Module(object):
 
     def find_molecules(self, samples):
         """Определение количества требуемых"""
-        molecules = Molecule()
-        # sum molecules
+        results = []
         for sample in samples:
-            if sample.diagnosed:
-                molecules = molecules.add(sample.cost)
-        # div 
-        molecules =  molecules.sub(self.storage).sub(self.expertise)
-
-        return molecules.first_letter()
+            cost = sample.cost.submodule(self.expertise)
+            results.append((cost.sum(), cost.max_letter()))
+        result = sorted(results, key=lambda x: x[0])[:1]
+        
+        return result[1]
 
 
     def find_availables(self, samples):
