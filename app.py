@@ -121,7 +121,7 @@ class Module(object):
         for sample in samples:
             cost = sample.cost.submodule(self.expertise)
             results.append((cost.sum(), cost.max_letter()))
-        result = sorted(results, key=lambda x: x[0])[:1]
+        result = sorted(results, key=lambda x: x[0])[0]
         
         return result[1]
 

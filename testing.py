@@ -135,14 +135,7 @@ MOLECULES 2 4 0 0 0 2 0 0 0 1 2 1
         
         s = Strategy(w)
 
-        print s.availables
-        print s.potentials
-        results = []
-        for sample in s.diagnosed:
-            cost = sample.cost.submodule(s.target.expertise)
-            results.append((cost.sum(), cost.max_letter()))
-        print sorted(results, key=lambda x: x[0])[:1]
-
+        'E' == s.target.find_molecules(s.potentials)
 
 if __name__ == '__main__':
     unittest.main()
