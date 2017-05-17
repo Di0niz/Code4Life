@@ -14,16 +14,17 @@ class TestStringMethods(unittest.TestCase):
 
         w = World()
 
-        sys.stdin = StringIO.StringIO("""LABORATORY 2 12 2 3 2 1 2 1 0 1 0 1
-MOLECULES 2 4 0 0 0 2 0 0 0 1 2 1
-3 2 3 2 3
-6
-8 0 1 A 1 0 1 2 1 1
-9 0 1 A 1 0 2 0 0 2
-10 0 1 D 10 4 0 0 0 0
-6 1 1 E 1 2 2 0 1 0
-11 1 1 B 1 1 0 0 0 2
-12 1 1 E 1 1 1 1 1 0
+        sys.stdin = StringIO.StringIO("""MOLECULES 0 0 5 0 0 0 0 0 0 0 0 0
+        MOLECULES 0 0 0 1 0 0 4 0 0 0 0 0
+        0 4 5 5 1
+        6
+        0 0 1 C 1 2 1 0 0 0
+        2 0 1 D 1 3 0 0 0 0
+        4 0 1 C 1 0 0 0 3 0
+        1 1 1 C 10 0 0 0 0 4
+        3 1 1 D 10 4 0 0 0 0
+        5 1 1 D 1 2 0 1 0 2
+
 
         """)
 
@@ -119,23 +120,23 @@ MOLECULES 2 4 0 0 0 2 0 0 0 1 2 1
         w = World()
 
 
-        sys.stdin = StringIO.StringIO("""MOLECULES 1 24 0 0 1 0 0 3 0 1 1 1
-        DIAGNOSIS 2 6 0 1 0 2 0 0 1 1 2 2
-        5 4 4 3 5
+        sys.stdin = StringIO.StringIO("""MOLECULES 0 0 2 0 0 0 0 0 0 0 0 0
+        MOLECULES 0 0 0 0 2 0 0 0 0 0 0 0
+        3 5 3 5 5
         6
-        13 0 2 B 20 2 0 0 1 4
-        14 0 2 A 20 0 0 1 4 2
-        15 0 2 A 20 0 0 0 5 0
-        6 1 1 E 1 2 2 0 1 0
-        16 1 2 0 -1 -1 -1 -1 -1 -1
-        17 1 2 0 -1 -1 -1 -1 -1 -1
+        0 0 1 C 1 0 0 0 3 0
+        2 0 1 A 10 0 0 4 0 0
+        4 0 1 E 1 2 0 2 0 0
+        1 1 1 E 1 0 0 3 0 0
+        3 1 1 C 1 2 1 0 0 0
+        5 1 1 D 1 0 2 1 0 0
 
         """)
         w.update()
         
         s = Strategy(w)
 
-        'E' == s.target.find_molecules(s.potentials)
+        print s.target.find_molecules(s.potentials)
 
 if __name__ == '__main__':
     unittest.main()

@@ -50,7 +50,7 @@ class Molecule(object):
     def __repr__(self):
         return "%d %d %d %d %d" % (self.a,self.b,self.c,self.d,self.e)
     
-    def letter(self, base=0):
+    def letter(self, base=1):
         char = None
         if self.a >= base:
             char = 'A'
