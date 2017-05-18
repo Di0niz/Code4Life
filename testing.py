@@ -99,20 +99,50 @@ class TestStringMethods(unittest.TestCase):
         w.update()
         s.update()
 
-        print s.target.find_min_distance(s.diagnosed)
-        
-
-            
-            
+        self.assertEqual(s.target.find_min_distance(s.diagnosed).sample_id, 8)
 
 
+    def test_invalid_connect(self):
+        """Система расчитывала не верные буквы"""
 
 
+        sys.stdin = StringIO.StringIO("""0  
+        MOLECULES 0 0 0 1 2 2 1 0 0 0 0 0
+        MOLECULES 0 0 0 2 0 0 4 0 0 0 0 0
+        5 2 3 3 0
+        6
+        1 0 1 E 1 0 0 2 1 0
+        3 0 1 A 1 0 1 2 1 1
+        5 0 1 C 1 0 1 0 2 2
+        0 1 2 D 10 0 3 0 2 3
+        2 1 2 E 20 0 0 0 0 5
+        4 1 2 C 10 3 0 2 3 0""")
+
+        w = World()
+        s = Strategy(w)
+        w.update()
+        s.update()
+        self.assertEqual(s.calc_letter_molecule(), 'D')
+        sys.stdin = StringIO.StringIO("""0  
+        MOLECULES 0 46 0 5 0 1 0 2 1 2 3 0
+        MOLECULES 0 15 0 0 4 0 0 2 1 1 2 0
+        5 0 1 4 5
+        6
+        12 0 2 B 20 0 2 3 0 3
+        16 0 2 B 20 0 5 0 0 0
+        18 0 2 D 20 1 4 2 0 0
+        15 1 2 E 20 0 0 5 3 0
+        17 1 2 C 20 0 5 3 0 0
+        19 1 2 E 10 3 2 2 0 0""")
+        w = World()
+        s = Strategy(w)
+        w.update()
+        s.update()
 
 
+        self.assertNotEqual(s.calc_letter_molecule(), 'B')
 
 
-        
 
 if __name__ == '__main__':
     unittest.main()

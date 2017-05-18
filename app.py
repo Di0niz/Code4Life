@@ -166,23 +166,33 @@ class Module(object):
         return all_availables
 
 
-    def find_potentials(self, samples, world):
+    def find_potentials(self, availables, diagnosed, world):
         """Определение количества требуемых"""
+        if len(availables) == len(diagnosed) :
+            return []
+
+
+        samples = [x for x in diagnosed if x not in availables]
+            
+        future_storage, future_expertise = self.future(availables)
+        future_storage  = future_storage.add(world.available)
 
         results = []
         for combination in itertools.permutations(samples):
-            expertise = self.expertise
-            storage = self.storage.add(world.available)
+            expertise = future_expertise
+            storage = future_storage
             availables = []
             step = 0
             for sample in combination:
                 cost = sample.cost.submodule(expertise)
+                
                 storage = storage.sub(cost)
                 expertise = expertise.add(sample.gain)
 
-                availables.append(sample)
                 if storage.min() < 0:
                     break
+
+                availables.append(sample)
 
                 step = step + 1
                 results.append((step, storage.sum(), list(availables)))
@@ -193,6 +203,7 @@ class Module(object):
             all_availables = []
 
         return all_availables
+
 
     def find_min_distance(self, samples, limit=0):
         result = None
@@ -205,6 +216,19 @@ class Module(object):
                 min_cost = cost_sum
                 result = sample
         return result
+
+    def future(self, availables):
+        
+        storage = self.storage
+        expertise = self.expertise
+
+        for sample in availables:
+            cost = sample.cost.submodule(expertise)
+            storage = storage.sub(cost)
+            expertise = expertise.add(sample.gain)
+
+        return storage, expertise
+        
 
 
 
@@ -357,10 +381,10 @@ class Strategy(object):
         self.target = self.world.modules[0]
         self.enemy = self.world.modules[1]
 
-        all_potentials = self.target.find_potentials(self.diagnosed, self.world)
-        self.availables = self.target.find_availables(self.diagnosed)
 
-        self.potentials = [x for x in all_potentials if x not in self.availables]
+        self.availables = self.target.find_availables(self.diagnosed)
+        self.potentials = self.target.find_potentials(self.availables, self.diagnosed, self.world)
+
 
     def greed_molecule(self):
         molecule = None
@@ -408,7 +432,19 @@ class Strategy(object):
         sample = sorted(results, key=lambda x: (x[0],x[1])).pop()
 
         return sample[2]
+
+    def calc_letter_molecule(self):
+        if len(self.potentials) == 0:
+            return None
         
+        storage, expertise = self.target.future(self.availables)
+
+        for sample in self.potentials[:1]:
+            cost = sample.cost.submodule(expertise)
+            storage = storage.sub(cost)
+
+        return storage.min_letter()
+
 
     def get_action(self):
 
@@ -446,7 +482,7 @@ class Strategy(object):
 
                 if self.target.expertise.complexity() > 2:
                     command = (Commands.CONNECT, 3, action)
-                elif self.target.expertise.max() > 2:
+                elif self.target.expertise.max() > 1:
                     command = (Commands.CONNECT, 2, action)
                 else:
                     command = (Commands.CONNECT, 1, action)
@@ -502,9 +538,9 @@ class Strategy(object):
                 else:
                     action = Actions.MOLECULES_TO_LABORATORY
             elif action == Actions.MOLECULES_CONNECT:
-                molecules = self.target.find_molecules(self.potentials)
+                molecules = self.calc_letter_molecule()
 
-                if self.target.count_molecules < 10 and molecules is not None:
+                if molecules is not None:
                     command = (Commands.CONNECT, molecules, action)
                 #elif self.target.molecules < 10:
                 #    action = Actions.MOLECULES_GREED
