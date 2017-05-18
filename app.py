@@ -51,7 +51,8 @@ class Molecule(object):
             )
 
     def complexity(self):
-        return self.sum()/self.diffrent()
+        diff = max(self.diffrent(),1)
+        return self.sum()/diff
 
     def diagnosed(self):
         return not (self.a == -1 or self.b == -1 or self.c == -1 or self.d == -1 or self.e == -1)
@@ -136,62 +137,75 @@ class Module(object):
         return storage.min_letter()
 
 
-    def find_availables(self, samples):
-        """Определение количества требуемых"""
+    def find_availables(self, asamples):
+        """Определение количества требуемых в соответствет"""
 
-        availables = []
-
-        storage = self.storage
-        expertise = self.expertise
-    
-        # sum storage
-        for sample in sorted(samples, key=lambda x: x.complexity):
-            if sample.diagnosed:
-                av_sample = True
-
+        results = []
+        for combination in itertools.permutations(asamples):
+            expertise = self.expertise
+            storage = self.storage
+            availables = []
+            step = 0
+            for sample in combination:
                 cost = sample.cost.submodule(expertise)
+                storage = storage.sub(cost)
+                expertise = expertise.add(sample.gain)
 
-                if storage.sub(cost).min() < 0:
-                    av_sample = False
+                availables.append(sample)
+                if storage.min() < 0:
+                    break
 
-                if av_sample == True:
-                    availables.append(sample)
-                    storage = storage.sub(cost)
-                    expertise = expertise.add(sample.gain)
+                step = step + 1
+                results.append((step, storage.sum(), list(availables)))
 
-                    # добавить возможность определение возможности
+        if len(results) > 0:
+            all_availables = sorted(results, key=lambda x: (x[0],x[1])).pop()[2]
+        else:
+            all_availables = []
 
-        return availables
+        return all_availables
+
 
     def find_potentials(self, samples, world):
         """Определение количества требуемых"""
 
-        availables = []
-
-        storage = self.storage.add(world.available)
-
-        expertise = self.expertise
-
-        molecules = self.storage.add(self.expertise).add(world.available)
-
-        # sum molecules
-        # Необходимо добавить сортировку по среднему отклонению
-        for sample in sorted(samples, key=lambda x: x.complexity):
-            if sample.diagnosed:
-                av_sample = True
-
+        results = []
+        for combination in itertools.permutations(samples):
+            expertise = self.expertise
+            storage = self.storage.add(world.available)
+            availables = []
+            step = 0
+            for sample in combination:
                 cost = sample.cost.submodule(expertise)
+                storage = storage.sub(cost)
+                expertise = expertise.add(sample.gain)
 
-                check_sub = molecules.sub(cost)
-                if check_sub.min() < 0:
-                    av_sample = False
+                availables.append(sample)
+                if storage.min() < 0:
+                    break
 
-                if av_sample:
-                    availables.append(sample)
-                    storage = molecules.sub(cost)
-                    expertise = expertise.add(sample.gain)
+                step = step + 1
+                results.append((step, storage.sum(), list(availables)))
 
-        return availables
+        if len(results) > 0:
+            all_availables = sorted(results, key=lambda x: (x[0],x[1])).pop()[2]
+        else:
+            all_availables = []
+
+        return all_availables
+
+    def find_min_distance(self, samples, limit=0):
+        result = None
+        min_cost = limit
+        for sample in samples:
+            cost = sample.cost.submodule(self.storage).submodule(self.expertise)
+            cost_sum = cost.sum()
+
+            if cost_sum > min_cost:
+                min_cost = cost_sum
+                result = sample
+        return result
+
 
 
 class Sample(object):
@@ -248,6 +262,7 @@ class World(object):
         self.own_samples = []
         self.samples = []
         self.enemy_samples = []
+        self.clound_samples = []
         sample_count = int(raw_input())
         for i in xrange(sample_count):
             sample = Sample()
@@ -257,6 +272,9 @@ class World(object):
                 
             elif sample.carried_by == 0:
                 self.own_samples.append(sample)
+            
+            elif sample.carried_by == -1:
+                self.clound_samples.append(sample)
             
             self.samples.append(sample)
 
@@ -293,6 +311,9 @@ class Actions(object):
     DIAGNOSIS = "DIAGNOSIS"
     DIAGNOSIS_CONNECT = "DIAGNOSIS_CONNECT"
     DIAGNOSIS_TO_MOLECULES = "DIAGNOSIS_TO_MOLECULES"
+    DIAGNOSIS_TO_CLOUD = "DIAGNOSIS_TO_CLOUD"
+    DIAGNOSIS_FROM_CLOUD = "DIAGNOSIS_FROM_CLOUD"
+    DIAGNOSIS_TO_SAMPLE = "DIAGNOSIS_TO_SAMPLE"
 
     SAMPLES = "SAMPLES"
     SAMPLES_CONNECT = "SAMPLES_CONNECT"
@@ -309,6 +330,7 @@ class Actions(object):
     MOLECULES_CONNECT = "MOLECULES_CONNECT"
     MOLECULES_GREED = "MOLECULES_GREED"
     MOLECULES_TO_LABORATORY = "MOLECULES_TO_LABORATORY"
+    MOLECULES_TO_DIAGNOSIS = "MOLECULES_TO_DIAGNOSIS"
 
 
 class Strategy(object):
@@ -316,6 +338,10 @@ class Strategy(object):
     def __init__(self, world):
         self.world = world
 
+        # признак определяет, что необходимо сбросить дорогие молекулы
+        self.flush_high_cost = False
+
+    def update(self):
         self.diagnosed = []
         self.undiagnosed = []
         self.availables = []
@@ -331,7 +357,7 @@ class Strategy(object):
         self.target = self.world.modules[0]
         self.enemy = self.world.modules[1]
 
-        all_potentials = self.target.find_potentials(self.diagnosed, world)
+        all_potentials = self.target.find_potentials(self.diagnosed, self.world)
         self.availables = self.target.find_availables(self.diagnosed)
 
         self.potentials = [x for x in all_potentials if x not in self.availables]
@@ -406,19 +432,21 @@ class Strategy(object):
             action = Actions.SAMPLES
 
         while command is None:
-
+            #
+            # SAMPLES
+            #
             if action == Actions.SAMPLES:
                 if len(self.world.own_samples) < 3:
                     action = Actions.SAMPLES_CONNECT
                 else:
                     action = Actions.SAMPLES_TO_DIAGNOSIS
-
+                    
             elif action == Actions.SAMPLES_CONNECT:
                 # здесь необходимо делать выборку в соответствии с рангом
 
-                if self.target.expected_molecules > 6:
+                if self.target.expertise.complexity() > 2:
                     command = (Commands.CONNECT, 3, action)
-                elif self.target.expected_molecules > 3:
+                elif self.target.expertise.max() > 2:
                     command = (Commands.CONNECT, 2, action)
                 else:
                     command = (Commands.CONNECT, 1, action)
@@ -426,9 +454,18 @@ class Strategy(object):
             elif action == Actions.SAMPLES_TO_DIAGNOSIS:
                 command = (Commands.DIAGNOSIS, None, action)
 
+            #
+            # DIAGNOSIS
+            #
             elif action == Actions.DIAGNOSIS:
                 if len(self.undiagnosed):
                     action = Actions.DIAGNOSIS_CONNECT
+                elif self.flush_high_cost == True:
+                    action = Actions.DIAGNOSIS_TO_CLOUD
+                elif len(self.potentials) == 0 and len(self.availables) == 0 and len(self.diagnosed) == 3:
+                    self.flush_high_cost = True
+                elif len(self.world.own_samples) < 2:
+                    action = Actions.DIAGNOSIS_TO_SAMPLE
                 else:
                     action = Actions.DIAGNOSIS_TO_MOLECULES
 
@@ -437,6 +474,20 @@ class Strategy(object):
 
             elif action == Actions.DIAGNOSIS_TO_MOLECULES:
                 command = (Commands.MOLECULES, None, action)
+            elif action == Actions.DIAGNOSIS_TO_CLOUD:
+                
+                max_sample = self.target.find_min_distance(self.diagnosed, 2)
+                if max_sample is not None:
+                    command = (Commands.CONNECT, max_sample.sample_id, action)
+                else:
+                    self.flush_high_cost = False
+                    action = Actions.DIAGNOSIS
+            elif action == Actions.DIAGNOSIS_FROM_CLOUD:
+                
+                pass
+                #command = (Commands.MOLECULES, None, action)
+            elif action == Actions.DIAGNOSIS_TO_SAMPLE:
+                command = (Commands.SAMPLES, None, action)
 
             #
             # MOLECULES
@@ -446,6 +497,8 @@ class Strategy(object):
                     action = Actions.MOLECULES_CONNECT
                 #elif self.target.molecules < 10:
                 #    action = Actions.MOLECULES_GREED
+                elif len(self.potentials) == 0 and len(self.availables) == 0 and len(self.diagnosed) > 0:
+                    action = Actions.MOLECULES_TO_DIAGNOSIS
                 else:
                     action = Actions.MOLECULES_TO_LABORATORY
             elif action == Actions.MOLECULES_CONNECT:
@@ -468,6 +521,9 @@ class Strategy(object):
 
             elif action == Actions.MOLECULES_TO_LABORATORY:
                 command = (Commands.LABORATORY, None, action)
+
+            elif action == Actions.MOLECULES_TO_DIAGNOSIS:
+                command = (Commands.DIAGNOSIS, None, action)
 
             #
             # LABORATORY
@@ -506,11 +562,12 @@ if __name__ == '__main__':
     DEBUG = True
     WORLD = World()
 
+    STRATEGY = Strategy(WORLD)
+
     while True:
 
         WORLD.update()
-
-        STRATEGY = Strategy(WORLD)
+        STRATEGY.update()
 
 
         command = STRATEGY.get_action()

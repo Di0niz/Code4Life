@@ -26,92 +26,88 @@ class TestStringMethods(unittest.TestCase):
         w = World()
         w.update()
         s = Strategy(w)
-        av = find_availables(s.target, s.diagnosed)
+        s.update()
+        av = s.target.find_availables(s.diagnosed)
         self.assertEqual(av[0].sample_id, 2)
         self.assertEqual(av[1].sample_id, 0)
+        self.assertEqual(len(av), 2)
         
-    def test_optimal_ways(self):
-        """Поиск оптимального количества молекул требуемый для формирования выборки"""
+    def test_potential(self):
+        """Проверяем количество потенциальных"""
     
         sys.stdin = StringIO.StringIO("""0
-        MOLECULES 0 0 0 2 1 1 0 0 0 0 0 0
-        MOLECULES 0 0 1 0 0 0 3 0 0 0 0 0
-        4 3 4 4 2
-        6
-        0 0 1 E 1 0 0 1 3 1
-        2 0 1 D 1 0 2 1 0 0
-        4 0 1 E 1 1 2 1 1 0
-        1 1 1 E 1 2 0 2 0 0
-        3 1 1 B 1 0 0 0 0 3
-        5 1 1 B 1 1 0 0 0 2""")   
+        MOLECULES 0 12 1 1 0 1 3 2 0 0 0 1
+        LABORATORY 1 3 3 0 0 3 2 0 1 1 1 0
+        1 4 5 1 0
+        5
+        8 0 2 D 30 0 0 0 6 0
+        9 0 2 B 10 0 2 2 3 0
+        10 0 2 D 20 3 0 0 0 5
+        3 1 1 A 1 3 1 0 0 1
+        6 1 1 D 1 2 0 0 2 0""")   
 
         w = World()
-        w.update()
         s = Strategy(w)
+        w.update()
+        s.update()
 
-        for combination in itertools.permutations(s.diagnosed):
-
-            storage = s.target.storage
-            expetise = s.target.expertise
-
-            priority = None
-
-            for sample in combination:
-                cost = sample.cost.sub(expetise)
-                storage = storage.sub(cost)
-                expetise = expetise.add(sample.gain)
-         #       print " ", storage, 
-
-         #    print storage, storage.min(), storage.diffrent(), storage.complexity(), storage.min_letter()
-
-        storage = s.target.storage
-        available = w.available
-        for sample in w.enemy_samples:
-            cost = sample.cost.submodule(expetise)
-            available = available.sub(cost)
+        self.assertEqual(len(s.availables), 0)
+        self.assertEqual(len(s.potentials), 0)
 
 
-        expertise = s.target.expertise
-        for sample in w.own_samples:
-            cost = sample.cost.submodule(expetise)
-            storage = storage.sub(cost)
-        print storage,  s.target.storage
-        find_min_molecule(s)
+        command = s.get_action()
+        self.assertEqual(command[0], 'DIAGNOSIS')
 
+        sys.stdin = StringIO.StringIO("""0
+        MOLECULES 0 0 0 1 0 0 0 0 0 0 0 0
+        MOLECULES 0 0 0 0 0 0 1 0 0 0 0 0
+        5 4 5 5 4
+        6
+        0 0 1 E 10 0 4 0 0 0
+        2 0 1 A 1 0 2 2 0 1
+        4 0 1 A 1 0 1 1 1 1
+        1 1 1 B 1 1 0 0 0 2
+        3 1 1 A 1 3 1 0 0 1
+        5 1 1 C 1 0 0 0 3 0
+        """)   
 
-def find_min_molecule(self):
-    print 'a'
+        w = World()
+        s = Strategy(w)
+        w.update()
+        s.update()
+
+        self.assertEqual(len(s.availables), 0)
+        self.assertEqual(len(s.potentials), 2)
+
+    def test_min_distance(self):
+        """Расчитываем минимальное расстояние между молекулами"""
+    
+        sys.stdin = StringIO.StringIO("""0
+        DIAGNOSIS 0 12 1 1 0 1 3 2 0 0 0 1
+        LABORATORY 1 3 3 0 0 3 2 0 1 1 1 0
+        1 4 5 1 0
+        5
+        8 0 2 D 30 0 0 0 6 0
+        9 0 2 B 10 0 2 2 3 0
+        10 0 2 D 20 3 0 0 0 5
+        3 1 1 A 1 3 1 0 0 1
+        6 1 1 D 1 2 0 0 2 0
+        """)   
+
+        w = World()
+        s = Strategy(w)
+        w.update()
+        s.update()
+
+        print s.target.find_min_distance(s.diagnosed)
         
-def find_optimal_order(self, samples):
-    pass
 
-def find_availables(self, asamples):
-    """Определение количества требуемых в соответствет"""
+            
+            
 
-    results = []
-    for combination in itertools.permutations(asamples):
-        expertise = self.expertise
-        storage = self.storage
-        availables = []
-        step = 0
-        for sample in combination:
-            cost = sample.cost.submodule(expertise)
-            storage = storage.sub(cost)
-            expertise = expertise.add(sample.gain)
 
-            availables.append(sample)
-            if storage.min() < 0:
-                break
 
-            step = step + 1
-            results.append((step, storage.sum(), list(availables)))
 
-    if len(results) > 0:
-        all_availables = sorted(results, key=lambda x: (x[0],x[1])).pop()[2]
-    else:
-        all_availables = []
-
-    return all_availables
 
 
 
