@@ -4,6 +4,7 @@ import random
 import math
 import itertools
 
+DEBUG = False
 
 class Molecule(object):
     def __init__(self, a=0, b=0, c=0, d=0, e=0):
@@ -11,7 +12,7 @@ class Molecule(object):
     
     def add(self, other):
         return Molecule(self.a + other.a, self.b + other.b, self.c + other.c, self.d + other.d, self.e + other.e)
-
+    
     def sub(self, other):
         return Molecule(self.a - other.a, self.b - other.b, self.c - other.c, self.d - other.d, self.e - other.e)
 
@@ -34,11 +35,19 @@ class Molecule(object):
 
     def diffrent(self):
         return sum([
-            1 if self.a > 0 else 0,
-            1 if self.b > 0 else 0,
-            1 if self.c > 0 else 0,
-            1 if self.d > 0 else 0,
-            1 if self.e > 0 else 0]
+            1 if self.a != 0 else 0,
+            1 if self.b != 0 else 0,
+            1 if self.c != 0 else 0,
+            1 if self.d != 0 else 0,
+            1 if self.e != 0 else 0]
+            )
+    def abs(self):
+        return sum([
+            self.a if self.a > 0 else -self.a,
+            self.b if self.b > 0 else -self.b,
+            self.c if self.c > 0 else -self.c,
+            self.d if self.d > 0 else -self.d,
+            self.e if self.e > 0 else -self.e]
             )
 
     def complexity(self):
@@ -52,20 +61,20 @@ class Molecule(object):
     
     def letter(self, base=1):
         char = None
-        if self.a >= base:
+        if self.a == base:
             char = 'A'
-        elif self.b >= base:
+        elif self.b == base:
             char = 'B'
-        elif self.c >= base:
+        elif self.c == base:
             char = 'C'
-        elif self.d >= base:
+        elif self.d == base:
             char = 'D'
-        elif self.e >= base:
+        elif self.e == base:
             char = 'E'
         return char
 
     def first_letter(self):
-        return self.letter()
+        return self.letter(self.max())
     
     def min_letter(self):
         return self.letter(self.min())
@@ -100,7 +109,8 @@ class Module(object):
 
     def update(self):
         raw = raw_input()
-        print >> sys.stderr, raw
+        if DEBUG:
+            print >> sys.stderr, raw
 
         target, eta, score, storage_a, storage_b, storage_c, storage_d, storage_e, expertise_a, expertise_b, expertise_c, expertise_d, expertise_e = raw.split()
         self.target = target
@@ -117,13 +127,13 @@ class Module(object):
 
     def find_molecules(self, samples):
         """Определение количества требуемых"""
+        storage = self.storage
         results = []
         for sample in samples:
             cost = sample.cost.submodule(self.expertise)
-            results.append((cost.sum(), cost.max_letter()))
-        result = sorted(results, key=lambda x: x[0])[0]
-        
-        return result[1]
+            storage = storage.sub(cost)
+
+        return storage.min_letter()
 
 
     def find_availables(self, samples):
@@ -191,7 +201,8 @@ class Sample(object):
 
     def update(self):
         raw = raw_input()
-        print >> sys.stderr, raw
+        if DEBUG:
+            print >> sys.stderr, raw
         sample_id, carried_by, rank, expertise_gain, health, cost_a, cost_b, cost_c, cost_d, cost_e = raw.split()
         self.sample_id = int(sample_id)
         self.carried_by = int(carried_by)
@@ -216,7 +227,8 @@ class World(object):
         self.projects = []
         for i in xrange(project_count):
             raw = raw_input()
-            print >> sys.stderr, raw
+            if DEBUG:
+                print >> sys.stderr, raw
 
             self.projects.append([int(j) for j in raw.split()])
 
@@ -227,8 +239,8 @@ class World(object):
             module.update()
             self.modules.append(module)
         raw = raw_input()
-
-        print >> sys.stderr, raw
+        if DEBUG:
+            print >> sys.stderr, raw
         a,b,c,d,e = [int(i) for i in raw.split()]
         self.available = Molecule(a,b,c,d,e)
 
@@ -242,19 +254,11 @@ class World(object):
             sample.update()
             if sample.carried_by == 1:
                 self.enemy_samples.append(sample)
+                
             elif sample.carried_by == 0:
                 self.own_samples.append(sample)
-            else:
-                self.samples.append(sample)
-
-    def check_available(self, molecules):
-        available = True
-        for key in xrange(5):
-            if self.available[key] < molecules[key]:
-                available = False
-
-        return available
-
+            
+            self.samples.append(sample)
 
 class Commands(object):
     DIAGNOSIS = "DIAGNOSIS"
@@ -325,6 +329,7 @@ class Strategy(object):
                 self.undiagnosed.append(sample)
 
         self.target = self.world.modules[0]
+        self.enemy = self.world.modules[1]
 
         all_potentials = self.target.find_potentials(self.diagnosed, world)
         self.availables = self.target.find_availables(self.diagnosed)
@@ -489,14 +494,16 @@ class Strategy(object):
             else:
                 # Дорабатываем систему
                 Command = (Commands.WAIT, None, action)
-
-            print >>sys.stderr, "DISITION: ", action, command
+            if DEBUG:
+                print >>sys.stderr, "DISITION: ", action, command
 
         return command
 
 
 
 if __name__ == '__main__':
+
+    DEBUG = True
     WORLD = World()
 
     while True:
@@ -507,6 +514,5 @@ if __name__ == '__main__':
 
 
         command = STRATEGY.get_action()
-
 
         print_command(command)

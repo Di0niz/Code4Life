@@ -7,136 +7,116 @@ import itertools
 
 
 class TestStringMethods(unittest.TestCase):
-    def test1_potential(self):
-        """Проверяем вычисление потенциальных точек"""
 
-        sys.stdin = StringIO.StringIO('0')
+    def test_optimal_availables(self):
+        """Поиск оптимального количества рецептов требуемый для формирования выборки"""
+
+        sys.stdin = StringIO.StringIO("""0
+        MOLECULES 0 0 0 2 2 2 1 0 0 0 0 0
+        MOLECULES 0 0 1 0 0 0 3 0 0 0 0 0
+        4 3 4 4 2
+        6
+        0 0 1 E 1 0 0 1 3 1
+        2 0 1 D 1 0 2 1 0 0
+        4 0 1 E 1 1 2 1 1 0
+        1 1 1 E 1 2 0 2 0 0
+        3 1 1 B 1 0 0 0 0 3
+        5 1 1 B 1 1 0 0 0 2""")   
 
         w = World()
-
-        sys.stdin = StringIO.StringIO("""MOLECULES 0 0 5 0 0 0 0 0 0 0 0 0
-        MOLECULES 0 0 0 1 0 0 4 0 0 0 0 0
-        0 4 5 5 1
-        6
-        0 0 1 C 1 2 1 0 0 0
-        2 0 1 D 1 3 0 0 0 0
-        4 0 1 C 1 0 0 0 3 0
-        1 1 1 C 10 0 0 0 0 4
-        3 1 1 D 10 4 0 0 0 0
-        5 1 1 D 1 2 0 1 0 2
-
-
-        """)
-
         w.update()
+        s = Strategy(w)
+        av = find_availables(s.target, s.diagnosed)
+        self.assertEqual(av[0].sample_id, 2)
+        self.assertEqual(av[1].sample_id, 0)
+        
+    def test_optimal_ways(self):
+        """Поиск оптимального количества молекул требуемый для формирования выборки"""
+    
+        sys.stdin = StringIO.StringIO("""0
+        MOLECULES 0 0 0 2 1 1 0 0 0 0 0 0
+        MOLECULES 0 0 1 0 0 0 3 0 0 0 0 0
+        4 3 4 4 2
+        6
+        0 0 1 E 1 0 0 1 3 1
+        2 0 1 D 1 0 2 1 0 0
+        4 0 1 E 1 1 2 1 1 0
+        1 1 1 E 1 2 0 2 0 0
+        3 1 1 B 1 0 0 0 0 3
+        5 1 1 B 1 1 0 0 0 2""")   
 
+        w = World()
+        w.update()
         s = Strategy(w)
 
+        for combination in itertools.permutations(s.diagnosed):
 
-        command = s.get_action()
+            storage = s.target.storage
+            expetise = s.target.expertise
 
+            priority = None
+
+            for sample in combination:
+                cost = sample.cost.sub(expetise)
+                storage = storage.sub(cost)
+                expetise = expetise.add(sample.gain)
+         #       print " ", storage, 
+
+         #    print storage, storage.min(), storage.diffrent(), storage.complexity(), storage.min_letter()
+
+        storage = s.target.storage
+        available = w.available
+        for sample in w.enemy_samples:
+            cost = sample.cost.submodule(expetise)
+            available = available.sub(cost)
+
+
+        expertise = s.target.expertise
+        for sample in w.own_samples:
+            cost = sample.cost.submodule(expetise)
+            storage = storage.sub(cost)
+        print storage,  s.target.storage
+        find_min_molecule(s)
+
+
+def find_min_molecule(self):
+    print 'a'
+        
+def find_optimal_order(self, samples):
     pass
 
-    def test1_find_order(self):
+def find_availables(self, asamples):
+    """Определение количества требуемых в соответствет"""
 
-        sys.stdin = StringIO.StringIO('0')
+    results = []
+    for combination in itertools.permutations(asamples):
+        expertise = self.expertise
+        storage = self.storage
+        availables = []
+        step = 0
+        for sample in combination:
+            cost = sample.cost.submodule(expertise)
+            storage = storage.sub(cost)
+            expertise = expertise.add(sample.gain)
 
-        w = World()
+            availables.append(sample)
+            if storage.min() < 0:
+                break
 
-        # sys.stdin = StringIO.StringIO("""LABORATORY 2 12 2 3 2 1 2 1 0 1 0 1
-        # MOLECULES 2 4 0 0 0 2 0 0 0 1 2 1
-        # 3 2 3 2 3
-        # 4
-        # 8 0 1 A 1 0 1 2 1 1
-        # 9 0 1 A 1 0 2 0 0 2
-        # 10 0 1 D 10 4 0 0 0 0
-        # 6 1 1 E 1 2 2 0 1 0
-        # 11 1 1 B 1 1 0 0 0 2
-        # 12 1 1 E 1 1 1 1 1 0
-        # """)
-        sys.stdin = StringIO.StringIO("""LABORATORY 0 0 3 1 2 3 0 0 0 0 0 0
-        LABORATORY 0 0 2 2 3 2 0 0 0 0 0 0
-        0 2 0 0 5
-        6
-        0 0 1 C 1 0 0 0 3 0
-        2 0 1 A 10 0 0 4 0 0
-        4 0 1 E 1 2 0 2 0 0
-        1 1 1 E 1 0 0 3 0 0
-        3 1 1 C 1 2 1 0 0 0
-        5 1 1 D 1 0 2 1 0 0""")
+            step = step + 1
+            results.append((step, storage.sum(), list(availables)))
 
-        w.update()
+    if len(results) > 0:
+        all_availables = sorted(results, key=lambda x: (x[0],x[1])).pop()[2]
+    else:
+        all_availables = []
+
+    return all_availables
+
+
+
+
         
-        s = Strategy(w)
-
-        strong_solution = None
-        weak_solution = None
-
-        results = []
-        for available in s.availables:
-
-            # перебираем доступные комбинации
-            for combination in itertools.permutations([x for x in s.diagnosed if x != available]):
-
-                storage = s.target.storage
-                expertise = s.target.expertise
-
-                cost = available.cost.submodule(expertise)
-                storage = storage.sub(cost)
-                expertise = expertise.add(available.gain)
-
-                step = 0
-                results.append((step, storage.sum(), available))
-
-                for sample in combination:
-
-                    cost = sample.cost.submodule(expertise)
-                    storage = storage.sub(cost)
-                    expertise = expertise.add(sample.gain)
-
-
-                    if storage.min() < 0:
-                        break
-
-                    step = step + 1
-                    results.append((step, storage.sum(), available))
-
-
-        sample = sorted(results, key=lambda x: (x[0],x[1])).pop()
-        print sample
-
-        print s.availables
-        print s.potentials
-        print s.diagnosed
-
-
-        command = s.get_action()
-        print command
-
-
-    def test_choose_molecule(self):
-        sys.stdin = StringIO.StringIO('0')
-
-        w = World()
-
-
-        sys.stdin = StringIO.StringIO("""MOLECULES 0 0 2 0 0 0 0 0 0 0 0 0
-        MOLECULES 0 0 0 0 2 0 0 0 0 0 0 0
-        3 5 3 5 5
-        6
-        0 0 1 C 1 0 0 0 3 0
-        2 0 1 A 10 0 0 4 0 0
-        4 0 1 E 1 2 0 2 0 0
-        1 1 1 E 1 0 0 3 0 0
-        3 1 1 C 1 2 1 0 0 0
-        5 1 1 D 1 0 2 1 0 0
-
-        """)
-        w.update()
-        
-        s = Strategy(w)
-
-        print s.target.find_molecules(s.potentials)
 
 if __name__ == '__main__':
     unittest.main()
