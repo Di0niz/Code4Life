@@ -596,9 +596,7 @@ class Strategy(object):
             # SAMPLES
             #
             if action == Actions.SAMPLES:
-                if self.world.tick < 10 and len(self.world.own_samples) < 2:
-                    action = Actions.SAMPLES_CONNECT
-                elif self.world.tick > 10 and len(self.world.own_samples) < 3:
+                if len(self.world.own_samples) < 3:
                     action = Actions.SAMPLES_CONNECT
                 else:
                     action = Actions.SAMPLES_TO_DIAGNOSIS
@@ -609,10 +607,10 @@ class Strategy(object):
                 expertise = self.target.expertise
                 rank = 1
 
-                rank_cost_2 = self.world.match_ranking(2, self.target.expertise, 3)
-                rank_cost_3 = self.world.match_ranking(3, self.target.expertise, 3)
+                rank_cost_2 = self.world.match_ranking(2, self.target.expertise, 4)
+                rank_cost_3 = self.world.match_ranking(3, self.target.expertise, 4)
 
-                porog = 0.6
+                porog = 0.7
                 if rank_cost_3 > porog:
                     rank = 3
                 elif rank_cost_2 > porog:
