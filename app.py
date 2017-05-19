@@ -122,6 +122,22 @@ class Molecule(object):
             ret = Molecule(0,0,0,0,1)
         return ret
 
+    @staticmethod
+    def random():
+        ret = None
+        rand = int(random.random()*5)
+        if rand == 0:
+            ret = Molecule(1,0,0,0,0)
+        elif rand == 1:
+            ret = Molecule(0,1,0,0,0)
+        elif rand == 2:
+            ret = Molecule(0,0,1,0,0)
+        elif rand == 3:
+            ret = Molecule(0,0,0,1)
+        elif rand == 4:
+            ret = Molecule(0,0,0,0,1)
+        return ret
+
 
 class ModuleType(object):
     DIAGNOSIS, MOLECULES, LABORATORY, SAMPLES = "DIAGNOSIS", "MOLECULES", "LABORATORY", "SAMPLES"
@@ -662,10 +678,14 @@ class Strategy(object):
                 # здесь необходимо делать выборку в соответствии с рангом
 
                 expertise = self.target.expertise
+
+                for sample in self.undiagnosed:
+                    expertise = expertise.add(Molecule.random())
+                    
                 rank = 1
 
-                rank_cost_2 = self.world.match_ranking(2, self.target.expertise, 3, self.world.all_samples)
-                rank_cost_3 = self.world.match_ranking(3, self.target.expertise, 4, self.world.all_samples)
+                rank_cost_2 = self.world.match_ranking(2, expertise, 3, self.world.all_samples)
+                rank_cost_3 = self.world.match_ranking(3, expertise, 4, self.world.all_samples)
 
                 #porog = 0.8
                 if rank_cost_3 > 0.7:
