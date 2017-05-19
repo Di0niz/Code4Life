@@ -2,8 +2,9 @@
 import unittest
 import sys
 import StringIO
-from app import Sample, Module, World, Strategy
+from app import Sample, Module, Molecule, World, Strategy
 import itertools
+import random
 
 
 class TestStringMethods(unittest.TestCase):
@@ -53,10 +54,11 @@ class TestStringMethods(unittest.TestCase):
 
         self.assertEqual(len(s.availables), 0)
         self.assertEqual(len(s.potentials), 0)
+        self.assertEqual(len(s.unavailables), 3)
 
 
-        command = s.get_action()
-        self.assertEqual(command[0], 'DIAGNOSIS')
+        #command = s.get_action()
+        #self.assertEqual(command[0], 'DIAGNOSIS')
 
         sys.stdin = StringIO.StringIO("""0
         MOLECULES 0 0 0 1 0 0 0 0 0 0 0 0
@@ -139,9 +141,60 @@ class TestStringMethods(unittest.TestCase):
         w.update()
         s.update()
 
-
         self.assertNotEqual(s.calc_letter_molecule(), 'B')
 
+    def test_compare_samples(self):
+        """Операции с рецептами"""
+        l = []
+        l.append(Molecule(1,2,3,4,5))
+        l.append(Molecule(1,3,3,4,5))
+        l.append(Molecule(1,3,3,4,2))
+
+        self.assertEqual(Molecule(1,3,3,4,5) in l, True)
+
+
+    def test_get_reserved(self):
+        """Если нам не хватает молекул, тогда расчитываем потребность"""
+        sys.stdin = StringIO.StringIO("""0  
+        MOLECULES 0 0 1 1 0 3 1 0 0 0 0 0
+        MOLECULES 0 0 1 0 1 2 2 0 0 0 0 0
+        1 4 4 0 0
+        6
+        0 0 1 D 1 1 1 1 0 1
+        2 0 1 D 1 1 0 0 1 3
+        4 0 1 C 1 0 0 0 3 0
+        1 1 1 B 1 1 0 1 1 1
+        3 1 1 C 1 0 2 0 2 0
+        5 1 1 B 1 1 0 0 0 2""")
+        
+        w = World()
+        s = Strategy(w)
+        w.update()
+        s.update()
+
+        self.assertEqual( s.find_reserve_molecule() in ['B','C','D'], False)
+
+
+    def test_molecule_cmp(self):
+        
+        sys.stdin = StringIO.StringIO("""0  
+        SAMPLES 0 0 0 0 0 0 0 0 0 0 0 0
+        SAMPLES 0 0 0 0 0 0 0 0 0 0 0 0
+        5 5 5 5 5
+        2
+        0 0 1 0 -1 -1 -1 -1 -1 -1
+        1 1 1 0 -1 -1 -1 -1 -1 -1""")
+        
+        w = World()
+        s = Strategy(w)
+        w.update()
+        s.update()
+        w.all_samples.append(Molecule(0,0,0,0,4))
+
+        lst = [x for x in w.recepts[1] if not (x in w.all_samples)]
+        print lst
+
+        print w.all_samples
 
 
 if __name__ == '__main__':

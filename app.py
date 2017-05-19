@@ -44,13 +44,12 @@ class Molecule(object):
             1 if self.e != 0 else 0]
             )
     def abs(self):
-        return sum([
+        return Molecule(
             self.a if self.a > 0 else -self.a,
             self.b if self.b > 0 else -self.b,
             self.c if self.c > 0 else -self.c,
             self.d if self.d > 0 else -self.d,
-            self.e if self.e > 0 else -self.e]
-            )
+            self.e if self.e > 0 else -self.e)
 
     def complexity(self):
         diff = max(self.diffrent(),1)
@@ -63,6 +62,9 @@ class Molecule(object):
         return "%d %d %d %d %d" % (self.a,self.b,self.c,self.d,self.e)
     
     def __cmp__(self, other):
+        return self.a ==other.a and self.b ==other.b and self.c ==other.c and self.d ==other.d and self.e ==other.e
+
+    def __eq__(self, other):
         return self.a ==other.a and self.b ==other.b and self.c ==other.c and self.d ==other.d and self.e ==other.e
 
 
@@ -89,7 +91,22 @@ class Molecule(object):
     def max_letter(self):
         return self.letter(self.max())
 
+    def convert_ones(self):
+        
+        lst = []
+        if self.a > 0:
+            lst = lst + [Molecule(1,0,0,0,0) for x in xrange(self.a)]
+        if self.b > 0:
+            lst = lst + [Molecule(0,1,0,0,0) for x in xrange(self.b)]
+        if self.c > 0:
+            lst = lst + [Molecule(0,0,1,0,0) for x in xrange(self.c)]
+        if self.d > 0:
+            lst = lst + [Molecule(0,0,0,1,0) for x in xrange(self.d)]
+        if self.e > 0:
+            lst = lst + [Molecule(0,0,0,0,1) for x in xrange(self.e)]
 
+        return lst
+            
     @staticmethod
     def parse(char):
         ret = None
@@ -267,6 +284,8 @@ class Sample(object):
 
 class World(object):
     def __init__(self):
+        
+        self.all_samples = []
         project_count = int(raw_input())
         self.projects = []
         self.tick = 0
@@ -375,7 +394,7 @@ class World(object):
     def match_ranking(self, rank, expertise, limit = 4, exclude = []):
         done = 0
         undone = 0
-        lst = self.recepts[rank]
+        lst = [x for x in self.recepts[rank] if not (x  in exclude)]
         for i in xrange(1000):
             sample = lst[int(random.random()*len(lst))]
             
@@ -420,6 +439,9 @@ class World(object):
                 self.clound_samples.append(sample)
             
             self.samples.append(sample)
+
+            if sample.cost not in self.all_samples:
+                self.all_samples.append(sample.cost)
 
 class Commands(object):
     DIAGNOSIS = "DIAGNOSIS"
@@ -569,6 +591,41 @@ class Strategy(object):
 
         return storage.min_letter()
 
+    def find_reserve_molecule(self):
+        """Ищем молекулы которые необходимо добрать"""
+        letter = None
+
+        if len(self.unavailables) == 0:
+            return letter
+        
+
+        storage, expertise = self.target.future(self.availables)
+
+        for sample in self.unavailables:
+            cost = sample.cost.submodule(expertise)
+            storage = storage.sub(cost)
+            expertise = expertise.add(sample.gain)
+
+        available = self.world.available
+
+        expected = Molecule(0,0,0,0,0).submodule(storage)
+
+        all_molecules = []
+
+        for reserve in expected.convert_ones():
+            check_available = available.sub(reserve)
+            if check_available.min() < 0:
+                continue
+            else:
+                all_molecules.append(reserve.max_letter())
+
+        # порядок определяем случайным образом
+        # для того, что в целом сделать более непредсказуемую игру
+        if len(all_molecules) > 0:
+            letter = all_molecules[int(random.random()*len(all_molecules))]
+
+        return letter
+        
 
     def get_action(self):
 
@@ -607,13 +664,13 @@ class Strategy(object):
                 expertise = self.target.expertise
                 rank = 1
 
-                rank_cost_2 = self.world.match_ranking(2, self.target.expertise, 4)
-                rank_cost_3 = self.world.match_ranking(3, self.target.expertise, 4)
+                rank_cost_2 = self.world.match_ranking(2, self.target.expertise, 3, self.world.all_samples)
+                rank_cost_3 = self.world.match_ranking(3, self.target.expertise, 4, self.world.all_samples)
 
-                porog = 0.7
-                if rank_cost_3 > porog:
+                #porog = 0.8
+                if rank_cost_3 > 0.7:
                     rank = 3
-                elif rank_cost_2 > porog:
+                elif rank_cost_2 > 0.6:
                     rank = 2
                 
                 # if posible_expertise_sum > 13:
@@ -676,7 +733,7 @@ class Strategy(object):
             elif action == Actions.MOLECULES:
                 if len(self.availables) > 0 and self.world.tick > 385:
                     action = Actions.MOLECULES_TO_LABORATORY
-                elif self.target.count_molecules < 10 and len(self.potentials) > 0:
+                elif self.target.count_molecules < 10:
                     action = Actions.MOLECULES_CONNECT
                 #elif self.target.molecules < 10:
                 #    action = Actions.MOLECULES_GREED
@@ -685,10 +742,16 @@ class Strategy(object):
                 else:
                     action = Actions.MOLECULES_TO_LABORATORY
             elif action == Actions.MOLECULES_CONNECT:
-                molecules = self.calc_letter_molecule()
+                letter = None
+                if len(self.potentials) > 0:
+                    letter = self.calc_letter_molecule()
+                else:
+                    letter = self.find_reserve_molecule()
+                    
 
-                if molecules is not None:
-                    command = (Commands.CONNECT, molecules, action)
+                if letter is not None:
+                    command = (Commands.CONNECT, letter, action)
+
                 #elif self.target.molecules < 10:
                 #    action = Actions.MOLECULES_GREED
                 else:
