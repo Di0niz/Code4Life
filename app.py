@@ -596,7 +596,9 @@ class Strategy(object):
             # SAMPLES
             #
             if action == Actions.SAMPLES:
-                if len(self.world.own_samples) < 3:
+                if self.world.tick < 10 and len(self.world.own_samples) < 2:
+                    action = Actions.SAMPLES_CONNECT
+                elif self.world.tick > 10 and len(self.world.own_samples) < 3:
                     action = Actions.SAMPLES_CONNECT
                 else:
                     action = Actions.SAMPLES_TO_DIAGNOSIS
