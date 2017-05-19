@@ -6,6 +6,8 @@ import itertools
 
 DEBUG = False
 
+
+
 class Molecule(object):
     def __init__(self, a=0, b=0, c=0, d=0, e=0):
         self.a, self.b, self.c, self.d, self.e = a, b, c, d, e
@@ -60,6 +62,10 @@ class Molecule(object):
     def __repr__(self):
         return "%d %d %d %d %d" % (self.a,self.b,self.c,self.d,self.e)
     
+    def __cmp__(self, other):
+        return self.a ==other.a and self.b ==other.b and self.c ==other.c and self.d ==other.d and self.e ==other.e
+
+
     def letter(self, base=1):
         char = None
         if self.a == base:
@@ -263,6 +269,7 @@ class World(object):
     def __init__(self):
         project_count = int(raw_input())
         self.projects = []
+        self.tick = 0
         for i in xrange(project_count):
             raw = raw_input()
             if DEBUG:
@@ -270,7 +277,119 @@ class World(object):
 
             self.projects.append([int(j) for j in raw.split()])
 
+
+        self.recepts = {1: [
+            Molecule(0, 3, 0, 0, 0),
+            Molecule(0, 0, 0, 2, 1),
+            Molecule(0, 1, 1, 1, 1),
+            Molecule(0, 2, 0, 0, 2),
+            Molecule(0, 0, 4, 0, 0),
+            Molecule(0, 1, 2, 1, 1),
+            Molecule(0, 2, 2, 0, 1),
+            Molecule(3, 1, 0, 0, 1),
+            Molecule(1, 0, 0, 0, 2),
+            Molecule(0, 0, 0, 0, 3),
+            Molecule(1, 0, 1, 1, 1),
+            Molecule(0, 0, 2, 0, 2),
+            Molecule(0, 0, 0, 4, 0),
+            Molecule(1, 0, 1, 2, 1),
+            Molecule(1, 0, 2, 2, 0),
+            Molecule(0, 1, 3, 1, 0),
+            Molecule(2, 1, 0, 0, 0),
+            Molecule(0, 0, 0, 3, 0),
+            Molecule(1, 1, 0, 1, 1),
+            Molecule(0, 2, 0, 2, 0),
+            Molecule(0, 0, 0, 0, 4),
+            Molecule(1, 1, 0, 1, 2),
+            Molecule(0, 1, 0, 2, 2),
+            Molecule(1, 3, 1, 0, 0),
+            Molecule(0, 2, 1, 0, 0),
+            Molecule(3, 0, 0, 0, 0),
+            Molecule(1, 1, 1, 0, 1),
+            Molecule(2, 0, 0, 2, 0),
+            Molecule(4, 0, 0, 0, 0),
+            Molecule(2, 1, 1, 0, 1),
+            Molecule(2, 0, 1, 0, 2),
+            Molecule(1, 0, 0, 1, 3),
+            Molecule(0, 0, 2, 1, 0),
+            Molecule(0, 0, 3, 0, 0),
+            Molecule(1, 1, 1, 1, 0),
+            Molecule(2, 0, 2, 0, 0),
+            Molecule(0, 4, 0, 0, 0),
+            Molecule(1, 2, 1, 1, 0),
+            Molecule(2, 2, 0, 1, 0),
+            Molecule(0, 0, 1, 3, 1)],
+            2: [
+            Molecule(0, 0, 0, 5, 0),
+            Molecule(6, 0, 0, 0, 0),
+            Molecule(0, 0, 3, 2, 2),
+            Molecule(0, 0, 1, 4, 2),
+            Molecule(2, 3, 0, 3, 0),
+            Molecule(0, 0, 0, 5, 3),
+            Molecule(0, 5, 0, 0, 0),
+            Molecule(0, 6, 0, 0, 0),
+            Molecule(0, 2, 2, 3, 0),
+            Molecule(2, 0, 0, 1, 4),
+            Molecule(0, 2, 3, 0, 3),
+            Molecule(5, 3, 0, 0, 0),
+            Molecule(0, 0, 5, 0, 0),
+            Molecule(0, 0, 6, 0, 0),
+            Molecule(2, 3, 0, 0, 2),
+            Molecule(3, 0, 2, 3, 0),
+            Molecule(4, 2, 0, 0, 1),
+            Molecule(0, 5, 3, 0, 0),
+            Molecule(5, 0, 0, 0, 0),
+            Molecule(0, 0, 0, 6, 0),
+            Molecule(2, 0, 0, 2, 3),
+            Molecule(1, 4, 2, 0, 0),
+            Molecule(0, 3, 0, 2, 3),
+            Molecule(3, 0, 0, 0, 5),
+            Molecule(0, 0, 0, 0, 5),
+            Molecule(0, 0, 0, 0, 6),
+            Molecule(3, 2, 2, 0, 0),
+            Molecule(0, 1, 4, 2, 0),
+            Molecule(3, 0, 3, 0, 2),
+            Molecule(0, 0, 5, 3, 0)],
+            3:[
+            Molecule(0, 0, 0, 0, 7),
+            Molecule(3, 0, 0, 0, 7),
+            Molecule(3, 0, 0, 3, 6),
+            Molecule(0, 3, 3, 5, 3),
+            Molecule(7, 0, 0, 0, 0),
+            Molecule(7, 3, 0, 0, 0),
+            Molecule(6, 3, 0, 0, 3),
+            Molecule(3, 0, 3, 3, 5),
+            Molecule(0, 7, 0, 0, 0),
+            Molecule(0, 7, 3, 0, 0),
+            Molecule(3, 6, 3, 0, 0),
+            Molecule(5, 3, 0, 3, 3),
+            Molecule(0, 0, 7, 0, 0),
+            Molecule(0, 0, 7, 3, 0),
+            Molecule(0, 3, 6, 3, 0),
+            Molecule(3, 5, 3, 0, 3),
+            Molecule(0, 0, 0, 7, 0),
+            Molecule(0, 0, 0, 7, 3),
+            Molecule(0, 0, 3, 6, 3),
+            Molecule(3, 3, 5, 3, 0)]}
+
+    def match_ranking(self, rank, expertise, limit = 4, exclude = []):
+        done = 0
+        undone = 0
+        lst = self.recepts[rank]
+        for i in xrange(1000):
+            sample = lst[int(random.random()*len(lst))]
+            
+            cost = sample.submodule(expertise)
+
+            if cost.sum() <= limit:
+                done = done + 1
+            else:
+                undone = undone + 1
+        return done * 1.0 / (done + undone)
+
+
     def update(self):
+        self.tick = self.tick + 2
         self.modules = []
         for i in xrange(2):
             module = Module()
@@ -338,6 +457,7 @@ class Actions(object):
     DIAGNOSIS_TO_CLOUD = "DIAGNOSIS_TO_CLOUD"
     DIAGNOSIS_FROM_CLOUD = "DIAGNOSIS_FROM_CLOUD"
     DIAGNOSIS_TO_SAMPLE = "DIAGNOSIS_TO_SAMPLE"
+    DIAGNOSIS_DROP_UNAVAILABLE = "DIAGNOSIS_DROP_UNAVAILABLE"
 
     SAMPLES = "SAMPLES"
     SAMPLES_CONNECT = "SAMPLES_CONNECT"
@@ -368,8 +488,9 @@ class Strategy(object):
     def update(self):
         self.diagnosed = []
         self.undiagnosed = []
-        self.availables = []
+        self.unavailables = []
         self.potentials = []
+        self.unavailables = []
 
         # Определяем примеры которые необходимо проверить
         for sample in self.world.own_samples:
@@ -384,6 +505,9 @@ class Strategy(object):
 
         self.availables = self.target.find_availables(self.diagnosed)
         self.potentials = self.target.find_potentials(self.availables, self.diagnosed, self.world)
+
+        future_av = self.availables + self.potentials
+        self.unavailables = [x for x in self.diagnosed if not (x in future_av)]
 
 
     def greed_molecule(self):
@@ -480,12 +604,28 @@ class Strategy(object):
             elif action == Actions.SAMPLES_CONNECT:
                 # здесь необходимо делать выборку в соответствии с рангом
 
-                if self.target.expertise.complexity() > 2:
-                    command = (Commands.CONNECT, 3, action)
-                elif self.target.expertise.max() > 1:
-                    command = (Commands.CONNECT, 2, action)
-                else:
-                    command = (Commands.CONNECT, 1, action)
+                expertise = self.target.expertise
+                rank = 1
+
+                rank_cost_2 = self.world.match_ranking(2, self.target.expertise, 3)
+                rank_cost_3 = self.world.match_ranking(3, self.target.expertise, 3)
+
+                porog = 0.6
+                if rank_cost_3 > porog:
+                    rank = 3
+                elif rank_cost_2 > porog:
+                    rank = 2
+                
+                # if posible_expertise_sum > 13:
+                #     rank = 3
+                # elif posible_expertise_sum > 10 and expertise.diffrent() > 2:
+                #     rank = 2
+                # elif posible_expertise_sum > 7 and expertise.diffrent() > 3:
+                #     rank = 2
+                # else:
+                #     rank = 1
+
+                command = (Commands.CONNECT, rank, action)
 
             elif action == Actions.SAMPLES_TO_DIAGNOSIS:
                 command = (Commands.DIAGNOSIS, None, action)
@@ -496,12 +636,10 @@ class Strategy(object):
             elif action == Actions.DIAGNOSIS:
                 if len(self.undiagnosed):
                     action = Actions.DIAGNOSIS_CONNECT
-                elif self.flush_high_cost == True:
-                    action = Actions.DIAGNOSIS_TO_CLOUD
-                elif len(self.potentials) == 0 and len(self.availables) == 0 and len(self.diagnosed) == 3:
-                    self.flush_high_cost = True
-                elif len(self.world.own_samples) < 2:
-                    action = Actions.DIAGNOSIS_TO_SAMPLE
+                #elif len(self.unavailables) > 0 and self.world.tick < 300:
+                #    action = Actions.DIAGNOSIS_TO_CLOUD
+                #elif len(self.world.own_samples) < 1:
+                #    action = Actions.DIAGNOSIS_TO_SAMPLE
                 else:
                     action = Actions.DIAGNOSIS_TO_MOLECULES
 
@@ -512,12 +650,19 @@ class Strategy(object):
                 command = (Commands.MOLECULES, None, action)
             elif action == Actions.DIAGNOSIS_TO_CLOUD:
                 
-                max_sample = self.target.find_min_distance(self.diagnosed, 2)
+                max_sample = self.target.find_min_distance(self.unavailables, 4)
                 if max_sample is not None:
                     command = (Commands.CONNECT, max_sample.sample_id, action)
                 else:
-                    self.flush_high_cost = False
-                    action = Actions.DIAGNOSIS
+                    action = Actions.DIAGNOSIS_TO_MOLECULES
+
+            elif action == Actions.DIAGNOSIS_DROP_UNAVAILABLE:
+                
+                max_sample = self.target.find_min_distance(self.unavailables, 2)
+                if max_sample is not None:
+                    command = (Commands.CONNECT, max_sample.sample_id, action)
+                else:
+                    action = Actions.DIAGNOSIS_TO_MOLECULES
             elif action == Actions.DIAGNOSIS_FROM_CLOUD:
                 
                 pass
@@ -529,7 +674,9 @@ class Strategy(object):
             # MOLECULES
             #
             elif action == Actions.MOLECULES:
-                if self.target.count_molecules < 10 and len(self.potentials) > 0:
+                if len(self.availables) > 0 and self.world.tick > 385:
+                    action = Actions.MOLECULES_TO_LABORATORY
+                elif self.target.count_molecules < 10 and len(self.potentials) > 0:
                     action = Actions.MOLECULES_CONNECT
                 #elif self.target.molecules < 10:
                 #    action = Actions.MOLECULES_GREED
@@ -567,6 +714,8 @@ class Strategy(object):
             elif action == Actions.LABORATORY:
                 if len(self.availables) > 0:
                     action = Actions.LABORATORY_CONNECT
+                elif len(self.world.own_samples) < 2 and self.world.tick < 350:
+                    action = Actions.LABORATORY_TO_SAMPLES
                 elif len(self.potentials) > 0:
                     action = Actions.LABORATORY_TO_MOLECULES
                 elif len(self.undiagnosed) > 0:
@@ -604,7 +753,7 @@ if __name__ == '__main__':
 
         WORLD.update()
         STRATEGY.update()
-
+    
 
         command = STRATEGY.get_action()
 
