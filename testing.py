@@ -28,7 +28,7 @@ class TestStringMethods(unittest.TestCase):
         w.update()
         s = Strategy(w)
         s.update()
-        av = s.target.find_availables(s.diagnosed)
+        av = s.target.find_availables(s.target.diagnosed)
         self.assertEqual(av[0].sample_id, 2)
         self.assertEqual(av[1].sample_id, 0)
         self.assertEqual(len(av), 2)
@@ -52,9 +52,9 @@ class TestStringMethods(unittest.TestCase):
         w.update()
         s.update()
 
-        self.assertEqual(len(s.availables), 0)
-        self.assertEqual(len(s.potentials), 0)
-        self.assertEqual(len(s.unavailables), 3)
+        self.assertEqual(len(s.target.availables), 0)
+        self.assertEqual(len(s.target.potentials), 0)
+        self.assertEqual(len(s.target.unavailables), 3)
 
 
         #command = s.get_action()
@@ -78,8 +78,8 @@ class TestStringMethods(unittest.TestCase):
         w.update()
         s.update()
 
-        self.assertEqual(len(s.availables), 0)
-        self.assertEqual(len(s.potentials), 2)
+        self.assertEqual(len(s.target.availables), 0)
+        self.assertEqual(len(s.target.potentials), 2)
 
     def test_min_distance(self):
         """Расчитываем минимальное расстояние между молекулами"""
@@ -101,7 +101,7 @@ class TestStringMethods(unittest.TestCase):
         w.update()
         s.update()
 
-        self.assertEqual(s.target.find_min_distance(s.diagnosed).sample_id, 8)
+        self.assertEqual(s.target.find_min_distance(s.target.diagnosed).sample_id, 8)
 
 
     def test_invalid_connect(self):
@@ -189,12 +189,8 @@ class TestStringMethods(unittest.TestCase):
         s = Strategy(w)
         w.update()
         s.update()
-        w.all_samples.append(Molecule(0,0,0,0,4))
 
-        lst = [x for x in w.recepts[1] if not (x in w.all_samples)]
-        print lst
-
-        print w.all_samples
+        print w.match_gain(3, Molecule(7,0,0,0,0),2)
 
 
 if __name__ == '__main__':
