@@ -120,6 +120,8 @@ class Molecule(object):
             ret = Molecule(0,0,0,1)
         elif char == 'E':
             ret = Molecule(0,0,0,0,1)
+        else:
+            ret = Molecule(0,0,0,0,0)
         return ret
 
     @staticmethod
@@ -529,7 +531,7 @@ class World(object):
             
             #el
             if sample.carried_by == -1:
-               self.clound_samples.append(sample)
+               self.cloud_samples.append(sample)
             
             self.samples.append(sample)
             self.molecules.append(sample.cost)
@@ -546,7 +548,6 @@ class World(object):
                 module = self.target
 
             if module is not None:
-            
                 if sample.diagnosed:
                     module.diagnosed.append(sample)
                 else:
@@ -750,24 +751,36 @@ class Strategy(object):
                     
             elif action == Actions.SAMPLES_CONNECT:
                 # здесь необходимо делать выборку в соответствии с рангом
+                #expertise = self.enemy.expertise
+                #
+                #for sample in self.enemy.undiagnosed:
+                #    gain = self.world.match_gain(sample.rank, expertise, 2, self.world.molecules)
+                #    if gain is not None:
+                #        expertise = expertise.add(gain)
+                #
+                #rank_cost_2 = self.world.match_ranking(2, expertise, 3, self.world.molecules)
+                #rank_cost_3 = self.world.match_ranking(3, expertise, 3, self.world.molecules)
+                #print >>sys.stderr, self.world.tick, "enemy (2,3): " , (rank_cost_2, rank_cost_3)
 
                 expertise = self.target.expertise
 
                 for sample in self.target.undiagnosed:
-                    gain = self.world.match_gain(sample.rank, expertise, 2, self.world.all_samples)
+                    gain = self.world.match_gain(sample.rank, expertise, 4, self.world.molecules)
                     if gain is not None:
                         expertise = expertise.add(gain)
                     
                 rank = 1
 
-                rank_cost_2 = self.world.match_ranking(2, expertise, 3, self.world.molecules)
-                rank_cost_3 = self.world.match_ranking(3, expertise, 3, self.world.molecules)
+                rank_cost_2 = self.world.match_ranking(2, expertise, 4, self.world.molecules)
+                rank_cost_3 = self.world.match_ranking(3, expertise, 4, self.world.molecules)
+                print >>sys.stderr, self.world.tick, "target 3: " , rank_cost_3
 
                 #porog = 0.8
                 if rank_cost_3 > 0.4:
                     rank = 3
-                elif rank_cost_2 > 0.6:
+                elif expertise.min()> 0 or rank_cost_2 > 0.6:
                     rank = 2
+
                 
                 # if posible_expertise_sum > 13:
                 #     rank = 3
@@ -840,17 +853,26 @@ class Strategy(object):
             elif action == Actions.MOLECULES_CONNECT:
                 letter = None
 
+
                 reserved = self.target.reserve_molecules(self.world.available)
                 if len(self.target.potentials) > 0:
                     letter = self.calc_letter_molecule()
-                else:
-                    # делаем оценку распределения молекул
-                    reserved_enemy = self.enemy.reserve_molecules(self.world.available, self.enemy.availables)
-                    letter = self.random(reserved_enemy)
+                elif self.target.storage.sum()<8:
                     
+                    my_storage, my_expertise = self.target.future(self.target.availables)
+                    # делаем оценку распределения молекул
+                    storage, expertise = self.enemy.future(self.enemy.samples)
+                    need = Molecule(0,0,0,0,0).submodule(storage)
+                    if need.max() > 3:
+                        need_letter = need.max_letter()
+                        need_resourse = Molecule.parse(need_letter)
 
+                        #проверяем достуность ресурса
+                        if self.world.available.sub(need_resourse).min() >= 0:
+                            letter = need_letter                    
+                        
                 if letter is not None:
-                    command = (Commands.CONNECT, letter, action)
+                    command = (Commands.CONNECT, letter, action)                    
 
                 #elif self.target.molecules < 10:
                 #    action = Actions.MOLECULES_GREED

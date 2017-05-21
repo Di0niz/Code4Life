@@ -190,7 +190,44 @@ class TestStringMethods(unittest.TestCase):
         w.update()
         s.update()
 
-        print w.match_gain(3, Molecule(7,0,0,0,0),2)
+        #print w.match_gain(3, Molecule(7,0,0,0,0),2)
+
+    def test_reserved_result(self):
+        """Определяем список молекул которые надо захвтить"""
+        sys.stdin = StringIO.StringIO("""0          
+        MOLECULES 0 148 2 0 0 0 0 2 3 3 2 7
+        MOLECULES 0 159 2 4 1 0 0 4 3 2 3 3
+        1 1 4 5 5
+        6
+        35 0 2 E 10 3 0 3 0 2
+        36 0 2 D 10 0 3 0 2 3
+        37 0 2 C 20 4 2 0 0 1
+        32 1 2 D 20 5 0 0 0 0
+        33 1 3 C 40 0 7 0 0 0
+        34 1 3 B 40 7 0 0 0 0
+        """)
+
+        w = World()
+        s = Strategy(w)
+        w.update()
+        s.update()
+
+        print "ENEMY:"
+        print s.enemy.samples
+        print s.enemy.availables
+        print s.enemy.potentials
+        print s.enemy.unavailables
+
+
+        # расчитываем будующую и текущую экспертизу
+        storage, expertise = s.enemy.future(s.enemy.samples)
+        need = Molecule(0,0,0,0,0).submodule(storage)
+
+        print need.max(),need.max_letter()
+        print need
+        print storage, "-" ,expertise
+
+        print s.enemy.potentials
 
 
 if __name__ == '__main__':
