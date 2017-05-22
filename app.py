@@ -170,7 +170,7 @@ class Module(object):
 
         self.expected_molecules = self.expertise.sum()
 
-    def max_rank():
+    def max_rank(self):
         """Вычисляем максимальный ранк"""
         rank = 1
         for sample in self.samples:
@@ -771,8 +771,8 @@ class Strategy(object):
                     
                 rank = 1
 
-                rank_cost_2 = self.world.match_ranking(2, expertise, 4, self.world.molecules)
-                rank_cost_3 = self.world.match_ranking(3, expertise, 4, self.world.molecules)
+                rank_cost_2 = self.world.match_ranking(2, expertise, 5, self.world.molecules)
+                rank_cost_3 = self.world.match_ranking(3, expertise, 5, self.world.molecules)
                 print >>sys.stderr, self.world.tick, "target 3: " , rank_cost_3
 
                 #porog = 0.8
@@ -802,8 +802,8 @@ class Strategy(object):
             elif action == Actions.DIAGNOSIS:
                 if len(self.target.undiagnosed):
                     action = Actions.DIAGNOSIS_CONNECT
-                #elif len(self.unavailables) > 0 and self.world.tick < 300:
-                #    action = Actions.DIAGNOSIS_TO_CLOUD
+                elif len(self.target.unavailables) > 1:
+                    action = Actions.DIAGNOSIS_TO_CLOUD
                 #elif len(self.world.own_samples) < 1:
                 #    action = Actions.DIAGNOSIS_TO_SAMPLE
                 else:
@@ -842,34 +842,54 @@ class Strategy(object):
             elif action == Actions.MOLECULES:
                 if len(self.target.availables) > 0 and self.world.tick > 385:
                     action = Actions.MOLECULES_TO_LABORATORY
-                elif self.target.count_molecules < 10:
+                elif self.target.storage.sum() < 10:
                     action = Actions.MOLECULES_CONNECT
-                #elif self.target.molecules < 10:
-                #    action = Actions.MOLECULES_GREED
                 elif len(self.target.potentials) == 0 and len(self.target.availables) == 0 and len(self.target.diagnosed) > 0:
                     action = Actions.MOLECULES_TO_DIAGNOSIS
                 else:
                     action = Actions.MOLECULES_TO_LABORATORY
             elif action == Actions.MOLECULES_CONNECT:
                 letter = None
-
+    
+    
 
                 reserved = self.target.reserve_molecules(self.world.available)
                 if len(self.target.potentials) > 0:
                     letter = self.calc_letter_molecule()
-                elif self.target.storage.sum()<8:
-                    
-                    my_storage, my_expertise = self.target.future(self.target.availables)
-                    # делаем оценку распределения молекул
-                    storage, expertise = self.enemy.future(self.enemy.samples)
-                    need = Molecule(0,0,0,0,0).submodule(storage)
-                    if need.max() > 3:
-                        need_letter = need.max_letter()
-                        need_resourse = Molecule.parse(need_letter)
+                elif len(reserved) < 5:
+                    letter = self.random(reserved)
 
-                        #проверяем достуность ресурса
-                        if self.world.available.sub(need_resourse).min() >= 0:
-                            letter = need_letter                    
+                if letter is None:
+                    # расчитываем будующую экспертизу
+                    storage, expertise = self.target.future(self.enemy.availables)
+                    
+
+                        # определяем полноту 
+                    max_count = 10 - self.target.storage.sum()
+                    eps = Molecule(0.0,0.0,0.0,0.0)
+                    eps.a = self.world.match_ranking(3, expertise.add(Molecule(min(max_count, self.world.available.a),0,0,0,0)), 4, self.world.molecules)
+                    eps.b = self.world.match_ranking(3, expertise.add(Molecule(0,min(max_count, self.world.available.b),0,0,0)), 4, self.world.molecules)
+                    eps.c = self.world.match_ranking(3, expertise.add(Molecule(0,0,min(max_count, self.world.available.c),0,0)), 4, self.world.molecules)
+                    eps.d = self.world.match_ranking(3, expertise.add(Molecule(0,0,0,min(max_count, self.world.available.d),0)), 4, self.world.molecules)
+                    eps.e = self.world.match_ranking(3, expertise.add(Molecule(0,0,0,0,min(max_count, self.world.available.e))), 4, self.world.molecules)
+
+                    print >> sys.stderr, "EPS: ", eps.max(), eps.max_letter()
+                    if  eps.max() > 0.4:
+                        letter = eps.max_letter() 
+                        # need_resourse = Molecule.parse(need_letter)
+                        
+                        #my_storage, my_expertise = self.target.future(self.target.availables)
+                        ## делаем оценку распределения молекул
+                        #need = Molecule(0,0,0,0,0).submodule(storage)
+                        #if need.max() > 3:
+                        #    need_letter = need.max_letter()
+                        #    need_resourse = Molecule.parse(need_letter)
+    
+                            #проверяем достуность ресурса
+
+                if self.world.available.sub(Molecule.parse(letter)).min() < 0:
+                    letter = None
+
                         
                 if letter is not None:
                     command = (Commands.CONNECT, letter, action)                    
@@ -900,6 +920,8 @@ class Strategy(object):
                 if len(self.target.availables) > 0:
                     action = Actions.LABORATORY_CONNECT
                 elif len(self.target.samples) < 2 and self.world.tick < 350:
+                    action = Actions.LABORATORY_TO_SAMPLES
+                elif len(self.target.unavailables) > 0:
                     action = Actions.LABORATORY_TO_SAMPLES
                 elif len(self.target.potentials) > 0:
                     action = Actions.LABORATORY_TO_MOLECULES
